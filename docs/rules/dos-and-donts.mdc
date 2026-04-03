@@ -1,0 +1,53 @@
+---
+description: Critical DOs and DON'Ts for the Logico codebase
+alwaysApply: true
+---
+
+# Logico — DOs and DON'Ts
+
+## Server DOs
+- **DO** wrap every async controller with `catchAsync`
+- **DO** throw `new ApiError(httpStatus.NOT_FOUND, 'X not found')` from services when a record is missing
+- **DO** apply middleware in order: `auth('perm')` → `validate(schema)` → `activityLogger('desc')` → `controller`
+- **DO** import models and services through barrel files (`require('../../models')`, `require('../../services')`)
+- **DO** use `Model.paginate(filter, options)` for all paginated lists
+- **DO** use the `hierarchy` plugin for tree data
+- **DO** soft-delete by setting `deletedAt = new Date()` — not `destroy()`
+- **DO** use UUID v4 (`DataTypes.UUIDV4`) as primary keys on all models
+- **DO** use `logger.info()` / `logger.error()` — never `console.log`
+- **DO** define all Sequelize associations in `models/index.js` only
+- **DO** add new permissions to `server/scripts/data/permission-schema.data.json`; run `npm run permissions` to generate `permissions.json`
+
+## Server DON'Ts
+- **DON'T** put business logic in controllers — controllers are thin wrappers
+- **DON'T** catch errors in services (except to wrap with `ApiError`) — let them bubble to `errorConverter`
+- **DON'T** use `console.log/warn/error` — ESLint enforces `no-console: error`
+- **DON'T** use `paranoid: true` on Sequelize models — soft delete is managed manually
+- **DON'T** use class-based Sequelize models — always use `sequelize.define()`
+- **DON'T** define associations inside model files — all in `models/index.js`
+- **DON'T** use `DataTypes.INTEGER` autoincrement for PKs — always UUID
+
+## Client DOs
+- **DO** use `@/` alias for all internal imports
+- **DO** use TanStack React Query hooks for all server data fetching
+- **DO** invalidate both paginate + hierarchy query keys after any mutation
+- **DO** wrap UI elements needing permission with `<ValidatePermission permission="x.y.z">`
+- **DO** declare `meta.permission` on every protected route definition
+- **DO** extend `GlobalRecords` for all backend entity types
+- **DO** use React Hook Form + Zod for all forms
+- **DO** use lazy loading (`lazy(() => import(...))`) for page components
+
+## Client DON'Ts
+- **DON'T** call `axiosInstance` directly in components/pages — always use hooks from `api/services/`
+- **DON'T** store `userInfo` in localStorage — only tokens are persisted; `userInfo` is re-fetched on mount
+- **DON'T** use Redux or React Context for server/API state — that's React Query's job
+- **DON'T** modify `components/ui/` shadcn files — treat as a library
+- **DON'T** write API logic inside pages — pages compose hooks, they don't call APIs
+- **DON'T** use `useState` + `useEffect` for server data fetching
+- **DON'T** add route protection only at the component level — also declare `meta.permission` at the route level
+
+## General
+- **DON'T** use `any` explicitly unless there's a very strong reason — prefer `unknown` or proper types
+- **DON'T** create new DB query utilities — use existing `paginate`, `hierarchy`, and `toJSON` plugins
+- **DON'T** edit `server/src/config/permissions.json` directly — it's generated from `server/scripts/data/permission-schema.data.json`; add new permissions there and run `npm run permissions`
+- **DO** follow the domain grouping: `user-management`, `configurations/masterdata`, `configurations/products`, `system`, `auth`, `ai-agent-services`

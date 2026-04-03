@@ -1,0 +1,95 @@
+---
+description: Server-side naming conventions, patterns, and middleware chain
+globs: server/**/*.js
+alwaysApply: false
+---
+
+# Server Conventions
+
+## Naming
+- **Files:** `kebab-case` with type suffix — `user.model.js`, `brand.service.js`, `auth.route.js`, `user.validation.js`, `user.controller.js`
+- **Directories:** `kebab-case` — `user-management/`, `ai-agent-services/`
+- **Variables/functions:** `camelCase`
+- **Classes:** `PascalCase` (`ApiError`, `Agent`)
+- **Env vars:** `UPPER_SNAKE_CASE`
+- **Exports:** CommonJS `module.exports = { ... }` named exports (or single default)
+
+## Protected Route Middleware Chain (always in this order)
+```js
+router.post('/resource/create',
+  auth('domain.resource.create'),     // 1. JWT auth + permission check
+  validate(schema.createResource),    // 2. Joi schema validation
+  activityLogger('Create resource'),  // 3. Activity log on response finish
+  controller.createResource           // 4. Thin controller
+);
+```
+
+## HTTP Verb / URL Conventions
+```
+POST   /resource/create               → create
+GET    /resource/paginate             → paginated list
+GET    /resource/all                  → flat list (no pagination)
+GET    /resource/hierarchy            → tree view
+GET    /resource/:id                  → get by ID
+PATCH  /resource/:id                  → update
+DELETE /resource/:id                  → soft delete (sets deletedAt)
+POST   /resource/hierarchy/update-order → reorder tree
+```
+
+## Controller Pattern (thin — no business logic)
+```js
+const createBrand = catchAsync(async (req, res) => {
+  const brand = await brandService.createBrand(req.body);
+  res.status(httpStatus.CREATED).send(brand);
+});
+```
+
+## Service Pattern (all business logic lives here)
+```js
+const createBrand = async (brandBody) => {
+  const existing = await Brand.findOne({ where: { name: brandBody.name } });
+  if (existing) throw new ApiError(httpStatus.CONFLICT, 'Brand already exists');
+  return Brand.create(brandBody);
+};
+```
+- Pure async functions — **no classes** in services
+- Throw `ApiError` on business failures; **never catch** — let errors bubble to `errorConverter`
+- Services imported via barrel: `const { brandService } = require('../../services')`
+- Models imported via barrel: `const { Brand } = require('../../models')`
+
+## Error Handling
+```js
+// ALWAYS wrap async controllers with catchAsync
+const getUser = catchAsync(async (req, res) => { ... });
+
+// ALWAYS throw ApiError from services
+throw new ApiError(httpStatus.NOT_FOUND, 'Brand not found');
+
+// NEVER catch errors in services — bubble to global errorConverter
+```
+
+## Logging
+```js
+// ✅ GOOD — use winston logger
+logger.info('Server started');
+logger.error('Something failed', { error });
+
+// ❌ BAD — ESLint enforces no-console: error
+console.log('Something happened');
+```
+
+## Imports
+```js
+// Barrel imports for models and services
+const { User, Brand } = require('../../models');
+const { userService, brandService } = require('../../services');
+
+// Relative paths only — no path aliases in server code
+```
+
+## Pagination
+```js
+// Use the paginate plugin — do not write custom pagination logic
+const result = await Brand.paginate(filter, options);
+// Returns: { data, currentPaginationIndex, dataPerPage, totalPages, totalResults, dataCount }
+```

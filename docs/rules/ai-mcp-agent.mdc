@@ -1,0 +1,75 @@
+---
+description: AI agent, MCP server, and WebSocket conventions
+globs: server/src/{agents,mcp}/**/*.js
+alwaysApply: false
+---
+
+# AI Agent & MCP Conventions
+
+## Architecture
+The AI system has two layers:
+1. **WebSocket layer** (`src/agents/`) — manages client connections, streams responses
+2. **MCP layer** (`src/mcp/`) — exposes tools/resources that the AI agent can call
+
+```
+client (WS) ←→ Agent (WS handler) ←→ OpenAI SDK ←→ MCP Client ←→ MCP Server (tools)
+```
+
+## WebSocket Entry
+- WebSocket server runs on a **separate port** from the HTTP API
+- Connection handler in `src/agents/`
+- Auth: validated on WS connection upgrade
+
+## MCP Tool Definition Pattern
+```js
+// src/mcp/tools/<tool-name>.js
+module.exports = {
+  name: 'get_brands',
+  description: 'Retrieve a list of brands from the database',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      search: { type: 'string', description: 'Filter by name' },
+    },
+  },
+  handler: async (input) => {
+    const brands = await brandService.queryBrands({ search: input.search });
+    return { content: [{ type: 'text', text: JSON.stringify(brands) }] };
+  },
+};
+```
+
+## MCP Resource Definition Pattern
+```js
+// src/mcp/resources/<resource-name>.js
+module.exports = {
+  uri: 'logico://system/context',
+  name: 'System Context',
+  description: 'Current system configuration and context',
+  mimeType: 'application/json',
+  handler: async () => {
+    const context = await systemService.getSystemContext();
+    return JSON.stringify(context);
+  },
+};
+```
+
+## Registering Tools/Resources
+- Register tools in `src/mcp/server.js` (the MCP server instance)
+- Register resources alongside tools in the same file
+- The MCP client (`src/mcp/client.js`) connects to the server via in-process transport
+
+## OpenAI Integration
+- Model is configurable via env (`OPENAI_MODEL`)
+- SDK: `openai` npm package
+- Streaming responses are forwarded to the client via WebSocket
+
+## Global Context
+- `src/config/global-context.js` provides system-wide context injected into AI prompts
+- Updated when system settings change; refresh via the `systemContext` Zustand store on client
+
+## Adding a New AI Tool
+1. Create `src/mcp/tools/<tool-name>.js` following the pattern above
+2. Import and register in `src/mcp/server.js`
+3. The agent will automatically discover and use it via the MCP protocol
+4. Add appropriate error handling — tools should return error content, not throw

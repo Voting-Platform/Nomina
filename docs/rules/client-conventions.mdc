@@ -1,0 +1,140 @@
+---
+description: Client-side conventions — TypeScript patterns, hooks, stores, components
+globs: client/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Client Conventions
+
+## Naming
+- **Files:** `kebab-case` — `brand-service.ts`, `login-page.tsx`, `session-store.ts`
+- **Components:** `PascalCase` function names, `kebab-case` filenames
+- **Types/Interfaces:** `PascalCase`, context-prefixed — `CreateBrand`, `UpdateBrand`, `BrandPaginationRequest`
+- **Custom hooks:** `use` prefix — `useGetBrandHierarchy`, `usePaginateBrands`, `useCreateBrand`
+- **Zustand stores:** `useXxxStore` — `useSessionStore`, `useThemeStore`
+
+## Imports — Always use `@/` alias
+```ts
+// ✅ GOOD
+import useSessionStore from "@/store/session-store";
+import { Button } from "@/components/ui/button";
+
+// ❌ BAD
+import useSessionStore from "../../store/session-store";
+```
+
+## State Management Rules
+- **Server/API state:** TanStack React Query — ALWAYS via custom hooks in `api/services/`
+- **Client/session state:** Zustand stores only
+- **Form state:** React Hook Form (local)
+- **Never use:** Redux, React Context for data, `useState` for server data
+
+```tsx
+// ✅ GOOD — use React Query hooks
+const { data: brands, isLoading } = usePaginateBrands(page, limit, search);
+
+// ❌ BAD — don't call axiosInstance directly in components
+const [brands, setBrands] = useState([]);
+useEffect(() => { axiosInstance.get('/brands').then(r => setBrands(r.data)); }, []);
+```
+
+## Zustand Session Store (what is/isn't persisted)
+```ts
+// Persisted to localStorage: accessToken, refreshToken, isUserLoggedIn
+// NOT persisted (re-fetched on layout mount): userInfo, systemContext
+```
+
+## React Query Hook Pattern
+```ts
+// In api/services/configurations/masterdata.ts
+export const usePaginateBrands = (page: number, limit: number, search: string) =>
+  useQuery({
+    queryKey: ['/masterdata/brands/paginate', page, limit, search],
+    queryFn: () => axiosInstance.get('/masterdata/brands/paginate', { params: { page, limit, search } }),
+  });
+
+export const useCreateBrand = () =>
+  useMutation({
+    mutationFn: (data: CreateBrand) => axiosInstance.post('/masterdata/brands/create', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/masterdata/brands/paginate'] });
+      queryClient.invalidateQueries({ queryKey: ['/masterdata/brands/hierarchy'] });
+    },
+  });
+```
+
+## Permission Gating
+```tsx
+// Route level — declare in route definition
+{ path: '/brands', element: <BrandsPage />, meta: { permission: 'masterdata.brand.view' } }
+
+// Component/UI level — wrap elements that need permission
+<ValidatePermission permission="masterdata.brand.create">
+  <Button onClick={openCreateDialog}>Add Brand</Button>
+</ValidatePermission>
+```
+
+## Types
+```ts
+// Global shared types — import from @/types/global-types
+import type { PaginateResult, PaginationRequest, GlobalRecords } from "@/types/global-types";
+
+// GlobalRecords is the base interface for all DB entities
+interface Brand extends GlobalRecords {
+  name: string;
+  code: string;
+  // ...
+}
+
+// Component prop types — define inline at top of file
+interface BrandCardProps {
+  brand: Brand;
+  onEdit: (id: string) => void;
+}
+```
+
+## Component Layers
+1. **`components/ui/`** — raw shadcn/ui; treat as library, **don't modify**
+2. **`components/chroma-components/`** — project-level reusable components; use these before creating new ones
+3. **`pages/<domain>/<resource>/list.tsx` / `details.tsx`** — compose layout + hooks only; no API logic
+
+## Page & Module Folder Structure
+Every module has its own folder with a `components` folder for **module-common** components. Sub-modules follow the same pattern. Component folders at each level are **only** for that level's common components.
+
+**Example:**
+```
+pages/mrp/components/                          # module-level common
+pages/mrp/materials/                           # sub-module
+pages/mrp/materials/components/                # sub-module common
+pages/mrp/materials/components/sections/       # grouped by type
+pages/mrp/materials/components/forms/          # grouped by type
+pages/mrp/materials/details/components/        # page-level (details page only)
+```
+
+**Page naming:**
+- First page is always `list.tsx` when there's a list of contents
+- Inside the resource folder: `details.tsx`
+- Other components and sub-pages use their own descriptive names
+
+## Form Pattern
+```tsx
+const form = useForm<CreateBrandSchema>({
+  resolver: zodResolver(createBrandSchema),
+  defaultValues: { name: '', code: '' },
+});
+
+// Always use React Hook Form + Zod — never uncontrolled inputs or manual validation
+```
+
+## Route Definition Pattern
+```ts
+// Each domain exports a RouterData[] array
+const brandRoutes: RouterData[] = [
+  {
+    path: '/masterdata/brands',
+    element: lazy(() => import('./list')),
+    meta: { permission: 'masterdata.brand.view', label: 'Brands' },
+  },
+];
+export default brandRoutes;
+```

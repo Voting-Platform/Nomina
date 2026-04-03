@@ -1,0 +1,161 @@
+---
+description: Design system, global color palette, responsiveness, and consistency rules
+alwaysApply: true
+---
+
+# Nomina — Design System & Responsiveness Rules
+
+> **RULE #1 — This is the foundational rule for the entire project.**
+> Every page, component, and layout MUST comply with these standards.
+
+## Responsiveness (Mandatory)
+
+- Every page MUST be fully responsive across **mobile** (320px+), **tablet** (768px+), and **desktop** (1280px+)
+- Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`, `xl:`) — **never** hardcode desktop-only layouts
+- Test at these breakpoints: `375px` (mobile), `768px` (tablet), `1440px` (desktop)
+- Touch targets MUST be ≥ 44px on mobile
+- Navigation must collapse to a hamburger or bottom nav on mobile
+- Forms must stack vertically on mobile
+- Grids: `grid-cols-1` base → `sm:grid-cols-2` → `lg:grid-cols-3` (or appropriate)
+
+## Design Consistency (Mandatory)
+
+- All pages MUST use the global color palette — **no ad-hoc hex, rgb, or hsl colors**
+- Use CSS custom properties (`var(--token)`) or Tailwind theme extensions only
+- Typography, spacing, border-radius, and shadow MUST follow the design tokens below
+- Every interactive element (button, link, input, card) MUST have hover, focus, and active states
+- Maintain consistent visual rhythm: same spacing, same card styles, same header patterns across all pages
+
+---
+
+## Global Color Palette — "Nomina Deep"
+
+All colors are defined as CSS custom properties in `globals.css`.
+
+### Primary (Royal Purple)
+- `--primary`: `#6C5CE7` — Primary buttons, active nav, links, focus rings
+- `--primary-hover`: `#5A4BD1` — Button/link hover state
+- `--primary-light`: `#EDE9FE` — Selected backgrounds, light badges, active tabs
+- `--primary-foreground`: `#FFFFFF` — Text on primary backgrounds
+
+### Secondary (Emerald)
+- `--secondary`: `#00B894` — Success states, positive actions, green badges
+- `--secondary-hover`: `#00A37D` — Hover state
+- `--secondary-light`: `#D1FAE5` — Light success backgrounds
+
+### Accent (Rose)
+- `--accent`: `#FD79A8` — Attention items, special CTAs, notifications
+- `--accent-light`: `#FDE8EF` — Light accent backgrounds
+
+### Neutrals
+- `--background`: `#FAFAFA` — Page background
+- `--surface`: `#FFFFFF` — Cards, panels, modals, dropdowns
+- `--surface-hover`: `#F5F3FF` — Hover state for cards and rows
+- `--border`: `#E5E7EB` — Borders, dividers, separators
+- `--border-strong`: `#D1D5DB` — Stronger borders (focused inputs)
+
+### Text
+- `--text-primary`: `#1F2937` — Headings, body text, primary content
+- `--text-secondary`: `#6B7280` — Subtitles, labels, secondary content
+- `--text-muted`: `#9CA3AF` — Placeholders, disabled, captions
+- `--text-on-primary`: `#FFFFFF` — Text on primary/secondary colored backgrounds
+
+### Semantic
+- `--destructive`: `#EF4444` — Delete buttons, error text, error borders
+- `--destructive-hover`: `#DC2626` — Delete hover
+- `--destructive-light`: `#FEE2E2` — Error backgrounds
+- `--warning`: `#F59E0B` — Warning badges, caution notices
+- `--warning-light`: `#FEF3C7` — Warning backgrounds
+- `--info`: `#3B82F6` — Info badges
+- `--info-light`: `#DBEAFE` — Info backgrounds
+
+---
+
+## Typography Tokens
+
+- **Font family:** `Geist` (sans-serif body), `Geist Mono` (monospace/code) — already configured in layout.tsx
+- **Headings:** Use `font-semibold` or `font-bold` with `leading-tight` (1.25)
+  - Page title: `text-2xl sm:text-3xl font-bold`
+  - Section title: `text-xl sm:text-2xl font-semibold`
+  - Card title: `text-lg font-semibold`
+  - Subsection: `text-base font-medium`
+- **Body:** `text-sm` (14px) as default body size with `leading-relaxed` (1.625)
+- **Emphasis:** `text-base` (16px) for important body text
+- **Small:** `text-xs` (12px) for badges, timestamps, helper text
+- **Color pairings:** Headings use `--text-primary`, body uses `--text-secondary`, muted uses `--text-muted`
+
+---
+
+## Spacing Tokens
+
+- **Page-level padding:** `px-4 sm:px-6 lg:px-8`
+- **Content max width:** `max-w-6xl mx-auto`
+- **Section vertical spacing:** `py-6 sm:py-8`
+- **Card padding:** `p-4 sm:p-6`
+- **Card gap (grids):** `gap-4 sm:gap-6`
+- **Form field spacing:** `space-y-4`
+- **Inline element gap:** `gap-2` (small), `gap-3` (medium), `gap-4` (large)
+
+---
+
+## Border, Radius & Shadow Tokens
+
+### Border Radius
+- Cards & panels: `rounded-xl`
+- Buttons & inputs: `rounded-lg`
+- Badges & chips: `rounded-full`
+- Avatars: `rounded-full`
+- Modals: `rounded-2xl`
+
+### Shadows
+- Cards (resting): `shadow-sm`
+- Cards (hovered): `shadow-md`
+- Modals & dropdowns: `shadow-lg`
+- Popovers: `shadow-xl`
+
+### Borders
+- Default: `border border-[var(--border)]`
+- Focused inputs: `ring-2 ring-[var(--primary)] border-[var(--primary)]`
+- Error inputs: `border-[var(--destructive)] ring-2 ring-[var(--destructive)]`
+
+---
+
+## State Styles
+
+### Buttons
+```
+Default:    bg-[var(--primary)] text-white rounded-lg
+Hover:      bg-[var(--primary-hover)]
+Focus:      ring-2 ring-offset-2 ring-[var(--primary)]
+Disabled:   opacity-50 cursor-not-allowed
+```
+
+### Cards
+```
+Default:    bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-sm
+Hover:      shadow-md bg-[var(--surface-hover)] transition-all duration-200
+```
+
+### Inputs
+```
+Default:    bg-[var(--surface)] border border-[var(--border)] rounded-lg text-sm
+Focus:      border-[var(--primary)] ring-2 ring-[var(--primary)]/20
+Error:      border-[var(--destructive)] ring-2 ring-[var(--destructive)]/20
+Placeholder: text-[var(--text-muted)]
+```
+
+---
+
+## Dos
+- ✅ Use CSS custom properties for all colors
+- ✅ Use responsive Tailwind prefixes on every layout
+- ✅ Include `transition-all duration-200` on interactive elements
+- ✅ Use `focus-visible:` for keyboard focus styles
+- ✅ Test all pages at 375px, 768px, and 1440px
+
+## Don'ts
+- ❌ Never use hardcoded hex colors like `text-[#333]` — use tokens
+- ❌ Never use fixed pixel widths for layouts (e.g., `w-[800px]`)
+- ❌ Never skip hover/focus states on clickable elements
+- ❌ Never use `hidden` without a responsive counterpart (e.g., `hidden sm:block`)
+- ❌ Never create a desktop-only layout without mobile consideration

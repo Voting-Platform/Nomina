@@ -1,0 +1,74 @@
+---
+description: Project architecture, tech stack, and folder structure overview
+alwaysApply: true
+---
+
+# Logico — Project Overview
+
+## Architecture
+**Monorepo (no workspace tooling)** — two independent npm projects side by side:
+- `client/` — React 19 + TypeScript + Vite frontend
+- `server/` — Express 4 + Node.js (JavaScript, CommonJS) backend
+- Communication: REST API at `/api/v1/` + WebSocket for AI chat
+
+## Backend Tech Stack
+- **Runtime/Framework:** Node.js + Express 4 (JavaScript, CommonJS)
+- **DB/ORM:** PostgreSQL 15 + Sequelize 6 (`sequelize.define()` pattern, NOT class-based)
+- **Auth:** Passport.js + JWT (stateless), 2FA via speakeasy (TOTP)
+- **Validation:** Joi 17 (route-level schemas in `validations/`)
+- **Security:** helmet, xss-clean, express-rate-limit, cors
+- **Logging:** winston (`logger.*`) + morgan — NO `console.log`
+- **AI:** OpenAI SDK + MCP (Model Context Protocol) + WebSocket agent
+- **Testing:** Jest 26 + Supertest
+
+## Frontend Tech Stack
+- **Framework:** React 19 + TypeScript ~5.7 (strict mode) + Vite 6
+- **Styling:** Tailwind CSS v4 + shadcn/ui (new-york style, slate base)
+- **Routing:** React Router DOM v7 (lazy-loaded routes)
+- **Server state:** TanStack React Query v5
+- **Client state:** Zustand v5 (with persist middleware for tokens only)
+- **Forms:** React Hook Form v7 + Zod
+- **HTTP:** Axios with interceptor-based token refresh
+
+## Server Folder Structure
+```
+server/src/
+├── agents/          AI agent class + WebSocket handler
+├── config/          App config, passport, cors, logger, permissions.json
+├── controllers/     Thin route handlers (no business logic)
+├── db/              Sequelize instance
+├── jobs/            Scheduled jobs (node-schedule)
+├── mcp/             MCP client/server/tools
+├── middlewares/     auth, validate, error, activity-logger, rateLimiter
+├── models/          Sequelize models + plugins (paginate, hierarchy, toJSON)
+├── routes/v1/       Express routers grouped by domain
+├── seeders/         Data seeders
+├── services/        Business logic (pure async functions, no classes)
+├── templates/       Handlebars PDF templates
+├── utils/           ApiError, catchAsync, pick, paginate, code-generator
+└── validations/     Joi schemas grouped by domain
+```
+
+## Client Folder Structure
+```
+client/src/
+├── api/services/    React Query hooks per resource
+├── components/
+│   ├── ui/                 shadcn/ui raw components (don't modify)
+│   ├── chroma-components/  custom project components
+│   ├── advance-table-grid/ reusable data table
+│   ├── chroma-form/        dynamic form renderer
+│   └── ai/                 AI chat components
+├── pages/<domain>/<resource>/  list.tsx / details.tsx
+├── routes/          RouterData[] definitions with meta.permission
+├── store/           Zustand stores
+└── types/           global-types.ts + domain-level .d.ts files
+```
+
+## Domain Groupings
+All code is consistently grouped by these domains:
+- `user-management` (users, roles, permissions)
+- `configurations` → `masterdata` (brands, categories, etc.) + `products`
+- `system` (activity logs, settings)
+- `auth`
+- `ai-agent-services`

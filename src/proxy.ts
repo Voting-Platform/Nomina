@@ -3,7 +3,7 @@ import { auth0 } from "./lib/auth0";
 
 // Centralized configuration for protected routes
 // In the future, this could be imported from a config file
-const PROTECTED_ROUTES = ["/dashboard", "/polls/create"];
+const PROTECTED_ROUTES = ["/dashboard", "/polls/create", "/elections"];
 
 export async function proxy(request: Request) {
   const url = new URL(request.url);

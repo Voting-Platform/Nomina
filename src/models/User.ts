@@ -6,7 +6,7 @@ const UserSchema = new Schema({
   email: { type: String, required: true, unique: true },
   auth0Id: { type: String, required: true, unique: true },
   picture: { type: String },
-  role: { type: String, enum: ["admin", "user"], default: "user" },
+  role: { type: String, enum: ["admin", "ec", "user"], default: "user" },
 }, { timestamps: true });
 
 export const User = models.User || model("User", UserSchema);
