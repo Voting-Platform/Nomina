@@ -1,0 +1,91 @@
+---
+description: Step-by-step checklist for adding a new resource/domain feature end-to-end
+alwaysApply: false
+---
+
+# Adding a New Resource (End-to-End Checklist)
+
+Follow this pattern when adding a new resource (e.g., a new masterdata entity like "Supplier").
+
+## 1. Backend — Server
+
+### Model (`server/src/models/<domain>/supplier.model.js`)
+```js
+const Supplier = sequelize.define('Supplier', {
+  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  code: { type: DataTypes.STRING, unique: true },
+  name: { type: DataTypes.STRING, allowNull: false },
+  mapping: { type: DataTypes.STRING, defaultValue: 'ROOT' },
+  deletedAt: { type: DataTypes.DATE, defaultValue: null },
+}, { tableName: 'suppliers', underscored: true, timestamps: true });
+```
+- Export and register in `models/index.js`
+- Add associations in `models/index.js`
+
+### Migration (`server/database/migrations/`)
+- Create a Sequelize CLI migration: `npx sequelize-cli migration:generate --name create-suppliers`
+- Run: `npm run db:migrate`
+
+### Validation (`server/src/validations/<domain>/supplier.validation.js`)
+```js
+const createSupplier = { body: Joi.object().keys({ name: Joi.string().required(), ... }) };
+module.exports = { createSupplier, updateSupplier, ... };
+```
+- Export from `validations/index.js`
+
+### Service (`server/src/services/<domain>/supplier.service.js`)
+- Implement: `createSupplier`, `getSupplierById`, `querySuppliers` (paginate), `updateSupplierById`, `deleteSupplierById`, optionally `getHierarchySuppliers`
+- Export from `services/index.js`
+
+### Controller (`server/src/controllers/<domain>/supplier.controller.js`)
+- Thin handlers wrapping services in `catchAsync`
+- Export from `controllers/index.js`
+
+### Route (`server/src/routes/v1/<domain>/supplier.route.js`)
+- Chain: `auth('domain.supplier.action')` → `validate(schema)` → `activityLogger('...')` → `controller`
+- Register in `routes/v1/index.js`
+
+### Permissions
+- **Do not** edit `permissions.json` directly — it's auto-generated
+- Add the new feature to `server/scripts/data/permission-schema.data.json` under the correct module (e.g., `"MASTERDATA": ["BRAND", "SUPPLIER", ...]`)
+- Run `npm run permissions` to regenerate `permissions.json` (generates `create`/`read`/`update`/`delete` per feature)
+
+---
+
+## 2. Frontend — Client
+
+### Types (`client/src/api/services/<domain>/`)
+```ts
+interface Supplier extends GlobalRecords { name: string; code: string; ... }
+interface CreateSupplier { name: string; ... }
+interface UpdateSupplier { name?: string; ... }
+```
+
+### API Hooks (same file as types)
+```ts
+export const usePaginateSuppliers = (...) => useQuery({ ... });
+export const useCreateSupplier = () => useMutation({ ..., onSuccess: () => invalidate(...) });
+export const useUpdateSupplier = () => useMutation({ ... });
+export const useDeleteSupplier = () => useMutation({ ... });
+```
+
+### Pages
+- `client/src/pages/<domain>/suppliers/list.tsx`
+- `client/src/pages/<domain>/suppliers/details.tsx` (if needed)
+
+### Routes (`client/src/routes/<domain>/index.ts`)
+```ts
+{ path: '/suppliers', element: lazy(() => import('./list')), meta: { permission: 'domain.supplier.view' } }
+```
+- Add to parent route array in `routes/index.ts`
+
+### Sidebar/Nav
+- Add nav entry if needed in the sidebar config
+
+---
+
+## Key Reminders
+- Every mutation must invalidate both `paginate` and `hierarchy` (if applicable) query keys
+- Every page route must have `meta.permission`
+- Every create/edit action in UI must be wrapped in `<ValidatePermission>`
+- New permissions must be added to `permission-schema.data.json`; run `npm run permissions` before using in routes

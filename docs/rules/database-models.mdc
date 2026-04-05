@@ -1,0 +1,91 @@
+---
+description: Sequelize model conventions — definitions, associations, soft delete, IDs
+globs: server/src/models/**/*.js
+alwaysApply: false
+---
+
+# Database / Sequelize Model Conventions
+
+## Model Definition (use `sequelize.define()` — NOT class-based)
+```js
+const Brand = sequelize.define(
+  'Brand',
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,   // ✅ Always UUID v4, never autoincrement integer
+      primaryKey: true,
+    },
+    code: { type: DataTypes.STRING, unique: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    mapping: { type: DataTypes.STRING, defaultValue: 'ROOT' }, // parent code; 'ROOT' = top-level
+    deletedAt: { type: DataTypes.DATE, defaultValue: null },   // manual soft delete
+    // ... other fields
+  },
+  {
+    tableName: 'brands',
+    underscored: true,   // columns use snake_case automatically
+    timestamps: true,    // auto created_at / updated_at
+  }
+);
+```
+
+## Key Rules
+- **Primary keys:** Always `DataTypes.UUID` + `DataTypes.UUIDV4` — never `INTEGER` autoincrement
+- **Soft delete:** Set `deletedAt = new Date()` manually — do NOT use Sequelize `paranoid: true` or `.destroy()`
+- **Column naming:** Set `underscored: true` — JS uses `camelCase`, DB columns use `snake_case`
+- **Timestamps:** Always `timestamps: true`; do not manually define `createdAt`/`updatedAt`
+- **`_id` alias:** Added globally via `afterDefine` hook in `models/index.js` — every model's `toJSON()` exposes `_id` as alias for `id`
+
+## Associations — All in `models/index.js`
+```js
+// ✅ GOOD — associations centralized in index.js
+Brand.hasMany(Product, { foreignKey: 'brandId', as: 'products' });
+Product.belongsTo(Brand, { foreignKey: 'brandId', as: 'brand' });
+
+// ❌ BAD — don't define associations inside individual model files
+```
+
+## Hierarchy Pattern (self-referential trees)
+```js
+// Models like Brand, Category use a mapping field (parent code)
+// Root nodes: mapping = 'ROOT'
+// Child nodes: mapping = parentCode
+// Use hierarchy.plugin.js to build tree from flat rows
+const tree = buildHierarchy(flatRows); // from hierarchy plugin
+```
+
+## Auto Code Generation
+```js
+// Models with a code field use beforeValidate hook for sequential codes
+Brand.addHook('beforeValidate', async (instance) => {
+  if (!instance.code) {
+    instance.code = await getNextCodePreview('Brand');
+  }
+});
+```
+
+## Soft Delete Pattern
+```js
+// ✅ GOOD — manual soft delete
+await brand.update({ deletedAt: new Date() });
+// OR in service:
+brand.deletedAt = new Date();
+await brand.save();
+
+// ❌ BAD — don't use destroy() or paranoid mode
+await brand.destroy();
+```
+
+## Query Filters
+```js
+// Always filter out soft-deleted records manually
+const brands = await Brand.findAll({
+  where: { deletedAt: null }
+});
+```
+
+## Plugins (auto-applied via addScope in models/index.js)
+- `paginate.plugin.js` — adds `Model.paginate(filter, options)` to all models
+- `hierarchy.plugin.js` — adds tree-building utilities
+- `toJSON.plugin.js` — adds `_id` alias, strips sensitive fields

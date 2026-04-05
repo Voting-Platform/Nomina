@@ -1,0 +1,82 @@
+---
+description: Authentication, JWT tokens, and permission system conventions
+globs: server/src/{middlewares,config,routes}/**/*.js
+alwaysApply: false
+---
+
+# Auth & Permissions
+
+## JWT Token System
+- **Access token:** 30 min lifetime (Bearer in `Authorization` header)
+- **Refresh token:** 30 days, stored in DB (`tokens` table), destroyed on use (rotation)
+- **Other tokens:** `resetPassword` (10 min), `verifyEmail` (10 min), `temp` (for 2FA flow)
+- **Strategy:** Stateless JWT via `passport-jwt`; no sessions
+
+## Token Refresh (Client)
+The Axios response interceptor handles 401s automatically:
+```ts
+// axiosInstance response interceptor:
+// 401 → attempt refresh via authInstance.post('auth/refresh-tokens')
+// Refresh success → retry original request
+// Refresh failure → clear Zustand store + redirect to /login
+// 403 → show Sonner toast warning (don't redirect)
+```
+
+## 2FA Flow
+```
+POST /auth/login → returns temp token (if 2FA enabled)
+POST /auth/verify-2fa → validates TOTP → returns access + refresh tokens
+```
+
+## Permission System
+Permissions are **fine-grained string keys** stored as `TEXT[]` on the `users` table:
+```
+settings.user.create
+settings.user.update
+settings.user.delete
+masterdata.brand.view
+masterdata.brand.create
+masterdata.category.delete
+```
+
+### Permission source: `server/scripts/data/permission-schema.data.json`
+**Add new permissions here.** `permissions.json` is generated from this file via `npm run permissions` — do not edit it directly.
+
+### Server-side enforcement
+```js
+// auth middleware checks: user.permissions.includes(requiredRight)
+router.post('/brands/create',
+  auth('masterdata.brand.create'),   // ← permission string from permissions.json
+  validate(schema),
+  activityLogger('Create brand'),
+  controller.createBrand
+);
+```
+
+### Client-side enforcement (two levels)
+```tsx
+// 1. Route level — in RouterData meta (for full page access)
+{ meta: { permission: 'masterdata.brand.view' } }
+
+// 2. Component level — for granular UI gating
+<ValidatePermission permission="masterdata.brand.create">
+  <CreateButton />
+</ValidatePermission>
+```
+
+## Account Locking
+Configurable via env: `LOCK_REPEATED_LOGINS`, `LOGIN_ATTEMPTS_LIMIT`, `LOCK_DURATION_MINUTES`.
+Tracked on User model: `loginAttempts` / `lockUntil` fields.
+
+## Adding a New Permission
+
+**⚠️ Do NOT edit `server/src/config/permissions.json` directly** — it is a generated file (and in `.gitignore`). It is produced when running `npm run permissions`.
+
+**To add new permissions:**
+1. Edit `server/scripts/data/permission-schema.data.json` — add the new feature to the appropriate module
+   - Format: `"MODULE_NAME": ["FEATURE1", "FEATURE2", "NEW_FEATURE"]`
+   - The script generates `module.feature.action` for actions: `create`, `read`, `update`, `delete`
+2. Run `npm run permissions` in the `server/` directory to regenerate `permissions.json`
+3. Use `auth('module.feature.action')` in the route (e.g. `masterdata.brand.create`)
+4. Use `<ValidatePermission permission="module.feature.action">` in the client
+5. Add to relevant role's default permission set in seeders if needed

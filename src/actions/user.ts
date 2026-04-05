@@ -32,9 +32,9 @@ export const getOrSyncDbUser = cache(async () => {
           role: "user",
         });
         user = newUser.toObject(); // Make it plain JS like .lean()
-      } catch (err: any) {
+      } catch (err: unknown) {
         // [FIX]: Race condition on signup. If two requests interleave, the second gets a 11000 Duplicate Key error.
-        if (err.code === 11000) {
+        if (err && typeof err === 'object' && 'code' in err && err.code === 11000) {
           user = await User.findOne({ auth0Id: session.user.sub }).lean();
         } else {
           throw err;
