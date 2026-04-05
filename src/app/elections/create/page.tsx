@@ -2,6 +2,8 @@ import { getOrSyncDbUser } from "@/actions/user";
 import { redirect } from "next/navigation";
 import { WizardContainer } from "./wizard-container";
 
+export const dynamic = "force-dynamic";
+
 export default async function CreateElectionPage() {
   const dbUser = await getOrSyncDbUser();
   if (!dbUser) redirect("/auth/login");

@@ -56,7 +56,6 @@ const ElectionSchema = new Schema(
 );
 
 // ─── Indexes ───
-ElectionSchema.index({ slug: 1 }, { unique: true });
 ElectionSchema.index({ createdBy: 1, deletedAt: 1 });
 ElectionSchema.index({ status: 1 });
 
