@@ -2,6 +2,7 @@
 
 import { getOrSyncDbUser } from "@/actions/user";
 import { Navbar } from "@/components/organisms/navbar";
+import { ImageUploadForm } from "@/components/molecules";
 
 export const dynamic = "force-dynamic";
 

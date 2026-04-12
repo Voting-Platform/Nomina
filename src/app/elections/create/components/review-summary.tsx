@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/atoms/badge";
-import { Separator } from "@/components/atoms/separator";
 import type { CreateElectionInput } from "@/types/election";
 
 interface ReviewSummaryProps {
@@ -37,11 +36,18 @@ export function ReviewSummary({ data }: ReviewSummaryProps) {
         </h3>
         <div className="space-y-2">
           {data.candidates.map((c, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center gap-2 min-w-0">
+              {c.imageUrl ? (
+                <img
+                  src={c.imageUrl}
+                  alt=""
+                  className="h-9 w-9 shrink-0 rounded-lg border border-[var(--border)] object-cover"
+                />
+              ) : null}
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary-light)] text-xs font-medium text-[var(--primary)]">
                 {i + 1}
               </span>
-              <span className="text-sm text-[var(--text-primary)]">{c.name}</span>
+              <span className="text-sm text-[var(--text-primary)] truncate">{c.name}</span>
               {c.description && (
                 <span className="text-xs text-[var(--text-muted)] truncate hidden sm:inline">
                   — {c.description}

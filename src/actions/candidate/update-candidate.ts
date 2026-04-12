@@ -38,7 +38,10 @@ export async function updateCandidate(
 
   if (data.name !== undefined) candidate.name = data.name;
   if (data.description !== undefined) candidate.description = data.description;
-  if (data.imageUrl !== undefined) candidate.imageUrl = data.imageUrl;
+  if (data.imageUrl !== undefined) {
+    candidate.imageUrl =
+      data.imageUrl === null || data.imageUrl === "" ? null : data.imageUrl;
+  }
 
   await candidate.save();
 
