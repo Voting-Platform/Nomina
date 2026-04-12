@@ -29,10 +29,6 @@ export default async function Home() {
         </p>
 
       </div>
-
-      <div className="mx-auto max-w-3xl px-8 pb-10">
-        <ImageUploadForm />
-      </div>
     </div>
   );
 }
