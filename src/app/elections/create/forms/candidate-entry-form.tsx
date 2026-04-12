@@ -2,8 +2,8 @@
 
 import { Input } from "@/components/atoms/input";
 import { Textarea } from "@/components/atoms/textarea";
-import { Label } from "@/components/atoms/label";
 import { Button } from "@/components/atoms/button";
+import { CandidateImageField } from "@/components/molecules/candidate-image-field";
 import { Trash2, GripVertical } from "lucide-react";
 import type { CreateCandidateInput } from "@/types/election";
 
@@ -19,18 +19,17 @@ export function CandidateEntryForm({
   errors,
 }: CandidateEntryFormProps) {
   const addCandidate = () => {
-    onCandidatesChange([...candidates, { name: "", description: "" }]);
+    onCandidatesChange([...candidates, { name: "", description: "", imageUrl: undefined }]);
   };
 
   const removeCandidate = (index: number) => {
     onCandidatesChange(candidates.filter((_, i) => i !== index));
   };
 
-  const updateCandidate = (index: number, field: keyof CreateCandidateInput, value: string) => {
-    const updated = candidates.map((c, i) =>
-      i === index ? { ...c, [field]: value } : c
+  const patchCandidate = (index: number, patch: Partial<CreateCandidateInput>) => {
+    onCandidatesChange(
+      candidates.map((c, i) => (i === index ? { ...c, ...patch } : c))
     );
-    onCandidatesChange(updated);
   };
 
   return (
@@ -60,8 +59,12 @@ export function CandidateEntryForm({
               <GripVertical className="h-4 w-4" />
             </div>
 
-            {/* Fields */}
-            <div className="flex-1 space-y-3">
+            <CandidateImageField
+              imageUrl={candidate.imageUrl}
+              onImageUrlChange={(url) => patchCandidate(index, { imageUrl: url })}
+            />
+
+            <div className="flex-1 space-y-3 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary-light)] text-xs font-medium text-[var(--primary)]">
                   {index + 1}
@@ -69,14 +72,14 @@ export function CandidateEntryForm({
                 <Input
                   placeholder="Candidate name"
                   value={candidate.name}
-                  onChange={(e) => updateCandidate(index, "name", e.target.value)}
-                  className="flex-1"
+                  onChange={(e) => patchCandidate(index, { name: e.target.value })}
+                  className="flex-1 min-w-0"
                 />
               </div>
               <Textarea
                 placeholder="Brief description (optional)"
                 value={candidate.description || ""}
-                onChange={(e) => updateCandidate(index, "description", e.target.value)}
+                onChange={(e) => patchCandidate(index, { description: e.target.value })}
                 rows={2}
                 className="text-sm"
               />

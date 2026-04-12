@@ -1,3 +1,4 @@
+
 export {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,3 +31,6 @@ export { Progress } from "./progress";
 export { ElectionCard } from "./election-card";
 export { StepIndicator } from "./step-indicator";
 export { ConfirmDialog } from "./confirm-dialog";
+
+export { ImageUploadForm } from "./image-upload-form";
+export { CandidateImageField } from "./candidate-image-field";

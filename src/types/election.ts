@@ -107,7 +107,8 @@ export interface CreateCandidateInput {
 export interface UpdateCandidateInput {
   name?: string;
   description?: string;
-  imageUrl?: string;
+  /** Pass `null` to remove the candidate photo. */
+  imageUrl?: string | null;
 }
 
 export interface VotingRulesInput {
