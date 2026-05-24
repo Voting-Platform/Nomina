@@ -3,6 +3,8 @@ import { getElectionById } from "@/actions/election/get-election-by-id";
 import { redirect, notFound } from "next/navigation";
 import { ElectionDetailNav } from "@/components/organisms/electionDetailNav";
 
+export const dynamic = "force-dynamic";
+
 export default async function ElectionDetailLayout({
   children,
   params,
