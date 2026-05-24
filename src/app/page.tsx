@@ -9,9 +9,8 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   let dbUser = null;
   
-  // We DO NOT call auth0.getSession() here anymore!
-  // We just let the cached DB function handle everything natively so it deduplicates perfectly
-  // across all Server Components, Layouts, and Server Actions without arguments messing up the React Cache key.
+  // The cached DB function handles session retrieval and user sync,
+  // deduplicating across all Server Components, Layouts, and Server Actions.
   dbUser = await getOrSyncDbUser();
   
   // Create a local session variable derived from the database user payload so the UI logic works

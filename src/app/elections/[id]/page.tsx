@@ -1,9 +1,9 @@
 import { getElectionById } from "@/actions/election/get-election-by-id";
 import { notFound } from "next/navigation";
-import { StatusBadge } from "@/components/atoms/status-badge";
-import { StatCard } from "@/components/atoms/stat-card";
-import { Badge } from "@/components/atoms/badge";
-import { Separator } from "@/components/atoms/separator";
+import { StatusBadge } from "@/components/atoms/statusBadge";
+import { StatCard } from "@/components/atoms/statCard";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Users, Vote, Eye, Calendar, Clock, Globe, Mail, AtSign } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 

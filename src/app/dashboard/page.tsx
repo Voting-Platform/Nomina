@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const dbUser = await getOrSyncDbUser();
-  if (!dbUser) redirect("/auth/login");
+  if (!dbUser) redirect("/api/auth/signin");
 
   const elections = await getMyElections();
 

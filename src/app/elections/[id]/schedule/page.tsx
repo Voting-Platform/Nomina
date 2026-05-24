@@ -1,6 +1,6 @@
 import { getElectionById } from "@/actions/election/get-election-by-id";
 import { notFound } from "next/navigation";
-import { ScheduleManager } from "./schedule-manager";
+import { ScheduleManager } from "@/components/organisms/scheduleManager";
 
 export const dynamic = "force-dynamic";
 

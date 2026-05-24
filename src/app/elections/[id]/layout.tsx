@@ -1,7 +1,7 @@
 import { getOrSyncDbUser } from "@/actions/user";
 import { getElectionById } from "@/actions/election/get-election-by-id";
 import { redirect, notFound } from "next/navigation";
-import { ElectionDetailNav } from "./components/election-detail-nav";
+import { ElectionDetailNav } from "@/components/organisms/electionDetailNav";
 
 export default async function ElectionDetailLayout({
   children,
@@ -12,7 +12,7 @@ export default async function ElectionDetailLayout({
 }) {
   const { id } = await params;
   const dbUser = await getOrSyncDbUser();
-  if (!dbUser) redirect("/auth/login");
+  if (!dbUser) redirect("/api/auth/signin");
 
   const election = await getElectionById(id).catch((err) => {
     console.error(`[ElectionDetailLayout] getElectionById("${id}") failed:`, err);

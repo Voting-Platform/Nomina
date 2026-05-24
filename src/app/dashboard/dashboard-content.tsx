@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
-import { Button } from "@/components/atoms/button";
-import { ConfirmDialog } from "@/components/molecules/confirm-dialog";
-import { ElectionStatsBar } from "./components/election-stats-bar";
-import { ElectionGrid } from "./components/election-grid";
-import { EmptyState } from "./components/empty-state";
-import { SearchFilterBar } from "./forms/search-filter-bar";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/molecules/confirmDialog";
+import { ElectionStatsBar } from "@/components/molecules/electionStatsBar";
+import { ElectionGrid } from "@/components/molecules/electionGrid";
+import { EmptyState } from "@/components/molecules/emptyState";
+import { SearchFilterBar } from "@/components/molecules/searchFilterBar";
 import { deleteElection } from "@/actions/election/delete-election";
 import { duplicateElection } from "@/actions/election/duplicate-election";
 import type { ElectionSummary, ElectionStatus } from "@/types/election";

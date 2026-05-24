@@ -1,6 +1,6 @@
 import { getElectionById } from "@/actions/election/get-election-by-id";
 import { notFound } from "next/navigation";
-import { EditElectionForm } from "./edit-election-form";
+import { EditElectionForm } from "@/components/organisms/editElectionForm";
 
 export const dynamic = "force-dynamic";
 
