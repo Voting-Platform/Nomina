@@ -1,4 +1,3 @@
-import { Navbar } from "@/components/organisms/navbar";
 import { getMyElections } from "@/actions/election/get-my-elections";
 import { getOrSyncDbUser } from "@/actions/user";
 import { redirect } from "next/navigation";
@@ -6,14 +5,12 @@ import { DashboardClient } from "@/components";
 
 export default async function DashboardPage() {
   const dbUser = await getOrSyncDbUser();
-  console.log("DB User:", dbUser);
   if (!dbUser) redirect("/api/auth/signin");
 
   const elections = await getMyElections();
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      <Navbar />
       <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">

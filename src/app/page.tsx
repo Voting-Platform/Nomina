@@ -1,7 +1,6 @@
 
 
 import { getOrSyncDbUser } from "@/actions/user";
-import { Navbar } from "@/components/organisms/navbar";
 import { ImageUploadForm } from "@/components/molecules";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +17,6 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <Navbar />
       <div className="mx-auto max-w-4xl p-8">
         <h1 className="text-4xl font-bold text-center">Welcome to the Voting Platform</h1>
         <p className="text-center text-gray-600 mt-4">
