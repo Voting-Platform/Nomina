@@ -2,12 +2,11 @@ import { Navbar } from "@/components/organisms/navbar";
 import { getMyElections } from "@/actions/election/get-my-elections";
 import { getOrSyncDbUser } from "@/actions/user";
 import { redirect } from "next/navigation";
-import { DashboardContent } from "./dashboard-content";
-
-export const dynamic = "force-dynamic";
+import { DashboardClient } from "@/components";
 
 export default async function DashboardPage() {
   const dbUser = await getOrSyncDbUser();
+  console.log("DB User:", dbUser);
   if (!dbUser) redirect("/api/auth/signin");
 
   const elections = await getMyElections();
@@ -28,7 +27,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <DashboardContent elections={elections} />
+        <DashboardClient elections={elections} />
       </main>
     </div>
   );

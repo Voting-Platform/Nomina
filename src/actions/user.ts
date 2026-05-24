@@ -29,10 +29,15 @@ export const getOrSyncDbUser = cache(async () => {
       return null;
     }
 
-    console.log("[getOrSyncDbUser] Querying database for user with ID:", userId);
+    console.log("[getOrSyncDbUser] Querying database for user by ID or email:", userId, session.user.email);
 
-    // FIND: 99% of the time they just exist, use .lean() for speed
-    let user = await User.findOne({ auth0Id: userId }).lean();
+    // FIND: Search by auth0Id OR by email to ensure we catch migrated users safely
+    let user = await User.findOne({
+      $or: [
+        { auth0Id: userId },
+        { email: session.user.email }
+      ]
+    }).lean();
 
     // SYNC: Only if they are missing or need profile updates
     if (!user) {
@@ -50,8 +55,8 @@ export const getOrSyncDbUser = cache(async () => {
       } catch (err: unknown) {
         // [FIX]: Race condition on signup. If two requests interleave, the second gets a 11000 Duplicate Key error.
         if (err && typeof err === 'object' && 'code' in err && err.code === 11000) {
-          console.log("[getOrSyncDbUser] Duplicate key race condition caught. Refetching existing user...");
-          user = await User.findOne({ auth0Id: userId }).lean();
+          console.log("[getOrSyncDbUser] Duplicate key race condition caught. Refetching by email...");
+          user = await User.findOne({ email: session.user.email }).lean();
         } else {
           console.error("[getOrSyncDbUser] Failed to create user entry:", err);
           throw err;
@@ -60,6 +65,13 @@ export const getOrSyncDbUser = cache(async () => {
     } else {
       console.log("[getOrSyncDbUser] Found existing user in DB:", user);
       
+      // [SELF-HEAL]: If user auth0Id mismatches the current userId (e.g., they logged in via Auth0 previously with 'google-oauth2|' prefix), update it dynamically!
+      if (user.auth0Id !== userId) {
+        console.log(`[getOrSyncDbUser] Migrating ID prefix mismatch (DB: ${user.auth0Id}, Current: ${userId}). Healing DB record...`);
+        await User.updateOne({ _id: user._id }, { auth0Id: userId });
+        user.auth0Id = userId;
+      }
+
       // [FIX]: Stale Profile Data. Check if the Mongo document is older than 24 hours.
       const STALE_THRESHOLD = 24 * 60 * 60 * 1000; // 24 hours in ms
       const isStale = !user.updatedAt || (Date.now() - new Date(user.updatedAt).getTime() > STALE_THRESHOLD);
@@ -68,7 +80,7 @@ export const getOrSyncDbUser = cache(async () => {
         console.log("[getOrSyncDbUser] User profile is stale (older than 24 hours). Triggering background update...");
         // Fix 3: Fire and forget the DB update to prevent blocking page load
         User.updateOne(
-          { auth0Id: userId },
+          { _id: user._id },
           { 
             name: session.user.name || user.name, 
             email: session.user.email || user.email, 

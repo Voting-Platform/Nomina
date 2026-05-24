@@ -15,11 +15,11 @@ import { deleteElection } from "@/actions/election/delete-election";
 import { duplicateElection } from "@/actions/election/duplicate-election";
 import type { ElectionSummary, ElectionStatus } from "@/types/election";
 
-interface DashboardContentProps {
+interface DashboardClientProps {
   elections: ElectionSummary[];
 }
 
-export function DashboardContent({ elections }: DashboardContentProps) {
+export function DashboardClient({ elections }: DashboardClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
