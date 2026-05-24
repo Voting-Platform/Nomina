@@ -2,10 +2,10 @@
 
 import { useCallback, useId, useState } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
-
 import { uploadImageAction, type UploadImageState } from "@/actions/cloudinary";
-import { Button } from "@/components/ui/button";
+import { Button, Input } from "@/components";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -83,7 +83,7 @@ export function CandidateImageField({
   return (
     <div className="flex shrink-0 flex-col gap-1">
       <div className="relative h-20 w-20">
-        <input
+        <Input
           id={inputId}
           type="file"
           accept="image/*"
@@ -105,10 +105,11 @@ export function CandidateImageField({
           )}
         >
           {imageUrl ? (
-            <img
+            <Image
               src={imageUrl}
               alt=""
               className="h-full w-full object-cover"
+              fill
             />
           ) : (
             <>
@@ -136,7 +137,7 @@ export function CandidateImageField({
         {imageUrl && !pending ? (
           <Button
             type="button"
-            variant="secondary"
+            variant="destructive"
             size="icon"
             disabled={disabled}
             className="absolute -right-1.5 -top-1.5 h-7 w-7 rounded-full border border-[var(--border)] shadow-sm"

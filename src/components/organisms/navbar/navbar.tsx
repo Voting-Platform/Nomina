@@ -1,17 +1,16 @@
 import Link from "next/link";
 import { CirclePlus, LayoutDashboard, LogOut, Vote } from "lucide-react";
-
 import { auth } from "@/auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
+  Avatar, AvatarFallback, AvatarImage,
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdownMenu";
+} from "@/components";
 
 function getInitials(name?: string | null, email?: string | null) {
   if (name && name.trim().length > 0) {
@@ -64,7 +63,7 @@ export async function Navbar() {
 
         {!user ? (
           <Button asChild>
-            <a href="/api/auth/signin">Continue with Google</a>
+            <Link href="/api/auth/signin">Continue with Google</Link>
           </Button>
         ) : (
           <DropdownMenu>
@@ -94,10 +93,10 @@ export async function Navbar() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <a href="/api/auth/signout" className="text-[var(--destructive)] focus:text-[var(--destructive-hover)]">
+                <Link href="/api/auth/signout" className="text-[var(--destructive)] focus:text-[var(--destructive-hover)]">
                   <LogOut className="h-4 w-4" />
                   Log out
-                </a>
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

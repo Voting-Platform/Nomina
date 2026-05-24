@@ -8,6 +8,7 @@ import type { SchedulingInput, SchedulingMode } from "@/types/election";
 interface SchedulingFormProps {
   scheduling: SchedulingInput;
   onSchedulingChange: (scheduling: SchedulingInput) => void;
+  errors?: Record<string, string>;
 }
 
 const MODE_OPTIONS: { value: SchedulingMode; label: string; description: string; icon: React.ElementType }[] = [
@@ -25,9 +26,14 @@ const MODE_OPTIONS: { value: SchedulingMode; label: string; description: string;
   },
 ];
 
-export function SchedulingForm({ scheduling, onSchedulingChange }: SchedulingFormProps) {
+export function SchedulingForm({ scheduling, onSchedulingChange, errors }: SchedulingFormProps) {
   return (
     <div className="space-y-4">
+      {errors?.scheduling && (
+        <p className="text-xs text-[var(--destructive)] bg-[var(--destructive-light)] px-3 py-2 rounded-lg">
+          {errors.scheduling}
+        </p>
+      )}
       {/* Mode selector */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {MODE_OPTIONS.map((option) => {

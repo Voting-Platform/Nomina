@@ -9,6 +9,7 @@ import type { VoterBaseInput, VoterBaseMode } from "@/types/election";
 interface VoterBaseFormProps {
   voterBase: VoterBaseInput;
   onVoterBaseChange: (voterBase: VoterBaseInput) => void;
+  errors?: Record<string, string>;
 }
 
 const MODE_OPTIONS: { value: VoterBaseMode; label: string; description: string; icon: React.ElementType }[] = [
@@ -32,9 +33,14 @@ const MODE_OPTIONS: { value: VoterBaseMode; label: string; description: string; 
   },
 ];
 
-export function VoterBaseForm({ voterBase, onVoterBaseChange }: VoterBaseFormProps) {
+export function VoterBaseForm({ voterBase, onVoterBaseChange, errors }: VoterBaseFormProps) {
   return (
     <div className="space-y-4">
+      {errors?.voterBase && (
+        <p className="text-xs text-[var(--destructive)] bg-[var(--destructive-light)] px-3 py-2 rounded-lg">
+          {errors.voterBase}
+        </p>
+      )}
       {/* Mode selector */}
       <div className="space-y-3">
         {MODE_OPTIONS.map((option) => {

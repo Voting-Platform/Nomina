@@ -20,6 +20,7 @@ export {
   DialogTitle,
   DialogDescription,
 } from "./dialog";
+export { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetClose } from "./sheet";
 export { Input } from "./input";
 export { Textarea } from "./textarea";
 export { Label } from "./label";

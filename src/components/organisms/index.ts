@@ -1,4 +1,5 @@
 export { Navbar } from "./navbar";
+export { Sidebar } from "./sidebar";
 export { CandidatesManager } from "./candidatesManager";
 export { ShareManager } from "./shareManager";
 export { EditElectionForm } from "./editElectionForm";

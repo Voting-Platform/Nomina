@@ -181,13 +181,13 @@ export function WizardContainer() {
           />
         )}
         {currentStep === 2 && (
-          <VotingRulesForm rules={votingRules} onRulesChange={setVotingRules} />
+          <VotingRulesForm rules={votingRules} onRulesChange={setVotingRules} errors={errors} />
         )}
         {currentStep === 3 && (
-          <VoterBaseForm voterBase={voterBase} onVoterBaseChange={setVoterBase} />
+          <VoterBaseForm voterBase={voterBase} onVoterBaseChange={setVoterBase} errors={errors} />
         )}
         {currentStep === 4 && (
-          <SchedulingForm scheduling={scheduling} onSchedulingChange={setScheduling} />
+          <SchedulingForm scheduling={scheduling} onSchedulingChange={setScheduling} errors={errors} />
         )}
         {currentStep === 5 && <ReviewSummary data={createInput} />}
 

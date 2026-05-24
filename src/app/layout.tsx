@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components";
+import { Sidebar } from "@/components";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Voting Platform",
-  description: "Unleash the power of decentralized decision-making with our cutting-edge voting platform. Experience secure, transparent, and efficient voting like never before. Join us in shaping the future of democracy today!",
+  description:
+    "Unleash the power of decentralized decision-making with our cutting-edge voting platform. Experience secure, transparent, and efficient voting like never before. Join us in shaping the future of democracy today!",
 };
 
 export default function RootLayout({
@@ -29,8 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <Navbar />
-        {children}
+        <Sidebar>{children}</Sidebar>
       </body>
     </html>
   );
