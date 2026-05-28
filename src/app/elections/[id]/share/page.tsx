@@ -1,6 +1,6 @@
 import { getElectionById } from "@/actions/election/get-election-by-id";
 import { notFound } from "next/navigation";
-import { ShareManager } from "./share-manager";
+import { ShareManager } from "@/components/organisms/shareManager";
 
 export const dynamic = "force-dynamic";
 

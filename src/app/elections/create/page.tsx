@@ -1,12 +1,12 @@
 import { getOrSyncDbUser } from "@/actions/user";
 import { redirect } from "next/navigation";
-import { WizardContainer } from "./wizard-container";
+import { WizardContainer } from "@/components/organisms/createElectionWizard";
 
 export const dynamic = "force-dynamic";
 
 export default async function CreateElectionPage() {
   const dbUser = await getOrSyncDbUser();
-  if (!dbUser) redirect("/auth/login");
+  if (!dbUser) redirect("/api/auth/signin");
 
   return (
     <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10">

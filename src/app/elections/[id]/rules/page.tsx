@@ -1,6 +1,6 @@
 import { getElectionById } from "@/actions/election/get-election-by-id";
 import { notFound } from "next/navigation";
-import { RulesManager } from "./rules-manager";
+import { RulesManager } from "@/components/organisms/rulesManager";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/organisms/navbar";
-
 export default function ElectionsLayout({
   children,
 }: {
@@ -7,7 +5,6 @@ export default function ElectionsLayout({
 }) {
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      <Navbar />
       {children}
     </div>
   );
