@@ -1,4 +1,4 @@
-import { getElectionById } from "@/actions/election/get-election-by-id";
+import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/atoms/statusBadge";
 import { StatCard } from "@/components/atoms/statCard";

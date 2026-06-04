@@ -12,7 +12,7 @@ import { VotingRulesForm } from "@/components/organisms/createElectionWizard/for
 import { VoterBaseForm } from "@/components/organisms/createElectionWizard/forms/voterBaseForm";
 import { SchedulingForm } from "@/components/organisms/createElectionWizard/forms/schedulingForm";
 import { ReviewSummary } from "@/components/organisms/createElectionWizard/reviewSummary";
-import { createElection } from "@/actions/election/create-election";
+import { createElection } from "@/lib/api/server/election/create-election";
 import type {
   CreateCandidateInput,
   VotingRulesInput,

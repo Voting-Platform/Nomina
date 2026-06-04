@@ -11,7 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 
-import { uploadImageAction, type UploadImageState } from "@/actions/cloudinary";
+import { uploadImageAction, type UploadImageState } from "@/lib/api/server/cloudinary";
 import { Button } from "@/components/ui/button";
 
 const initialState: UploadImageState = {

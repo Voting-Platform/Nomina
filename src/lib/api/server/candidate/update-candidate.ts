@@ -3,16 +3,17 @@
 import { connectDB } from "@/lib/db";
 import { Election } from "@/models/Election";
 import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/actions/user";
-import type { CandidatePrivilegesInput } from "@/types/election";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
+import type { UpdateCandidateInput } from "@/types/election";
+import { serialize } from "@/lib/serialize";
 
 /**
- * Updates per-candidate voting privileges.
- * Sets max receivable votes and eligibility for a specific candidate.
+ * Updates a candidate's details (name, description, image).
+ * Verifies the caller owns the parent election.
  */
-export async function updateCandidatePrivileges(
+export async function updateCandidate(
   candidateId: string,
-  privileges: CandidatePrivilegesInput
+  data: UpdateCandidateInput
 ) {
   const dbUser = await getOrSyncDbUser();
   if (!dbUser) throw new Error("Unauthorized");
@@ -35,21 +36,14 @@ export async function updateCandidatePrivileges(
     throw new Error("You do not have permission to modify this election");
   }
 
-  // Validate
-  if (
-    privileges.maxVotesReceivable !== null &&
-    privileges.maxVotesReceivable < 1
-  ) {
-    throw new Error("Max votes receivable must be at least 1 or null (unlimited)");
+  if (data.name !== undefined) candidate.name = data.name;
+  if (data.description !== undefined) candidate.description = data.description;
+  if (data.imageUrl !== undefined) {
+    candidate.imageUrl =
+      data.imageUrl === null || data.imageUrl === "" ? null : data.imageUrl;
   }
-
-  candidate.maxVotesReceivable = privileges.maxVotesReceivable;
-  candidate.isEligibleForVoting = privileges.isEligibleForVoting;
 
   await candidate.save();
 
-  const result = candidate.toObject();
-  result._id = result._id.toString();
-  result.election = result.election.toString();
-  return result;
+  return serialize(candidate.toObject());
 }

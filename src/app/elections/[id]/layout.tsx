@@ -1,5 +1,5 @@
-import { getOrSyncDbUser } from "@/actions/user";
-import { getElectionById } from "@/actions/election/get-election-by-id";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
 import { redirect, notFound } from "next/navigation";
 import { ElectionDetailNav } from "@/components/organisms/electionDetailNav";
 

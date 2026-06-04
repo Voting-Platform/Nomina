@@ -2,7 +2,7 @@
 
 import { connectDB } from "@/lib/db";
 import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/actions/user";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
 import type { UpdateElectionInput } from "@/types/election";
 
 /**

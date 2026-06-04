@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/atoms/statusBadge";
 import { SchedulingForm } from "@/components/organisms/createElectionWizard/forms/schedulingForm";
-import { updateScheduling } from "@/actions/scheduling/update-scheduling";
-import { manuallyOpenElection } from "@/actions/scheduling/manually-open-election";
-import { manuallyCloseElection } from "@/actions/scheduling/manually-close-election";
+import { updateScheduling } from "@/lib/api/server/scheduling/update-scheduling";
+import { manuallyOpenElection } from "@/lib/api/server/scheduling/manually-open-election";
+import { manuallyCloseElection } from "@/lib/api/server/scheduling/manually-close-election";
 import type { SchedulingInput, ElectionStatus, SchedulingMode } from "@/types/election";
 import { Save, Play, Square } from "lucide-react";
 

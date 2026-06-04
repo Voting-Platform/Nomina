@@ -11,8 +11,8 @@ import { ElectionStatsBar } from "@/components/molecules/electionStatsBar";
 import { ElectionGrid } from "@/components/molecules/electionGrid";
 import { EmptyState } from "@/components/molecules/emptyState";
 import { SearchFilterBar } from "@/components/molecules/searchFilterBar";
-import { deleteElection } from "@/actions/election/delete-election";
-import { duplicateElection } from "@/actions/election/duplicate-election";
+import { deleteElection } from "@/lib/api/server/election/delete-election";
+import { duplicateElection } from "@/lib/api/server/election/duplicate-election";
 import type { ElectionSummary, ElectionStatus } from "@/types/election";
 
 interface DashboardClientProps {

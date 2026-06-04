@@ -1,6 +1,6 @@
 
 
-import { getOrSyncDbUser } from "@/actions/user";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
 import { ImageUploadForm } from "@/components/molecules";
 
 export const dynamic = "force-dynamic";

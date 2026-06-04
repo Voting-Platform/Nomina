@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/db";
 import { Election } from "@/models/Election";
 import { Candidate } from "@/models/Candidate";
 import { Vote } from "@/models/Vote";
-import { getOrSyncDbUser } from "@/actions/user";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
 import type { ElectionSummary } from "@/types/election";
 
 /**

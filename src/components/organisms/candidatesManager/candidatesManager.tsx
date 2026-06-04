@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/molecules/confirmDialog";
 import { CandidateImageField } from "@/components/molecules/candidateImageField";
-import { addCandidate } from "@/actions/candidate/add-candidate";
-import { updateCandidate } from "@/actions/candidate/update-candidate";
-import { removeCandidate } from "@/actions/candidate/remove-candidate";
+import { addCandidate } from "@/lib/api/server/candidate/add-candidate";
+import { updateCandidate } from "@/lib/api/server/candidate/update-candidate";
+import { removeCandidate } from "@/lib/api/server/candidate/remove-candidate";
 import { Plus, Pencil, Trash2, Save, X, Vote } from "lucide-react";
 
 function candidateInitials(name: string): string {
