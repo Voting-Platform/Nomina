@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { VotingRulesForm } from "@/components/organisms/createElectionWizard/forms/votingRulesForm";
-import { updateVotingRules } from "@/actions/voting-rules/update-voting-rules";
-import { updateCandidatePrivileges } from "@/actions/voting-rules/update-candidate-privileges";
+import { updateVotingRules } from "@/lib/api/server/voting-rules/update-voting-rules";
+import { updateCandidatePrivileges } from "@/lib/api/server/voting-rules/update-candidate-privileges";
 import type { VotingRulesInput } from "@/types/election";
 import { Save, ShieldCheck } from "lucide-react";
 

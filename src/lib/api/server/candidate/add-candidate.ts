@@ -1,11 +1,10 @@
 "use server";
 
-import { connectDB } from "@/lib/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/actions/user";
-import { serialize } from "@/lib/serialize";
-import type { CreateCandidateInput } from "@/types/election";
+import { connectDB } from "@/config";
+import { Election,Candidate } from "@/models";
+import { getOrSyncDbUser } from "@/lib/api/server";
+import { serialize } from "@/lib";
+import type { CreateCandidateInput } from "@/types";
 
 /**
  * Adds a new candidate to an election.

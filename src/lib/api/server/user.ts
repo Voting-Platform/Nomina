@@ -1,7 +1,7 @@
 "use server";
 
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
+import { connectDB } from "@/config";
+import { User } from "@/models";
 import { auth } from "@/auth";
 import { cache } from "react";
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useState } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
-import { uploadImageAction, type UploadImageState } from "@/actions/cloudinary";
+import { uploadImageAction, type UploadImageState } from "@/lib/api/server/cloudinary";
 import { Button, Input } from "@/components";
 import { cn } from "@/lib/utils";
 import Image from "next/image";

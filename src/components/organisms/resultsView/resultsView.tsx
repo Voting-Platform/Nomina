@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { exportElectionCsv } from "@/actions/election/export-election-csv";
+import { exportElectionCsv } from "@/lib/api/server/election/export-election-csv";
 import { Download, Trophy, Medal } from "lucide-react";
 
 interface CandidateResult {

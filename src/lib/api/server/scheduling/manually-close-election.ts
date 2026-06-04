@@ -1,8 +1,8 @@
 "use server";
 
-import { connectDB } from "@/lib/db";
+import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/actions/user";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
 
 /**
  * Manually closes an open election.

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { updateElection } from "@/actions/election/update-election";
+import { updateElection } from "@/lib/api/server/election/update-election";
 import { VoterBaseForm } from "@/components/organisms/createElectionWizard/forms/voterBaseForm";
 import type { VoterBaseMode, VoterBaseInput } from "@/types/election";
 import { Save } from "lucide-react";

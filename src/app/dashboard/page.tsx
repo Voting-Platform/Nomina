@@ -1,5 +1,4 @@
-import { getMyElections } from "@/actions/election/get-my-elections";
-import { getOrSyncDbUser } from "@/actions/user";
+import { getMyElections, getOrSyncDbUser } from "@/lib/api/server";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components";
 

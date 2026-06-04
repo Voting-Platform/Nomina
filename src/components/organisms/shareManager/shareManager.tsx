@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CopyButton } from "@/components/atoms/copyButton";
 import { Separator } from "@/components/ui/separator";
-import { generateElectionLink } from "@/actions/sharing/generate-election-link";
-import { sendElectionLinkEmail } from "@/actions/sharing/send-election-link-email";
+import { generateElectionLink } from "@/lib/api/server/sharing/generate-election-link";
+import { sendElectionLinkEmail } from "@/lib/api/server/sharing/send-election-link-email";
 import { Link2, Mail, RefreshCw, Send, Check } from "lucide-react";
 
 interface ShareManagerProps {

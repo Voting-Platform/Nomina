@@ -1,4 +1,4 @@
-import { getOrSyncDbUser } from "@/actions/user";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
 import { redirect } from "next/navigation";
 import { WizardContainer } from "@/components/organisms/createElectionWizard";
 

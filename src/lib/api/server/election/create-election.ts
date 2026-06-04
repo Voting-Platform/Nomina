@@ -1,9 +1,9 @@
 "use server";
 
-import { connectDB } from "@/lib/db";
+import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
 import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/actions/user";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
 import type { CreateElectionInput } from "@/types/election";
 
 /**

@@ -5,15 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/molecules/confirmDialog";
-import { ElectionStatsBar } from "@/components/molecules/electionStatsBar";
-import { ElectionGrid } from "@/components/molecules/electionGrid";
-import { EmptyState } from "@/components/molecules/emptyState";
-import { SearchFilterBar } from "@/components/molecules/searchFilterBar";
-import { deleteElection } from "@/actions/election/delete-election";
-import { duplicateElection } from "@/actions/election/duplicate-election";
-import type { ElectionSummary, ElectionStatus } from "@/types/election";
+import { Button, ConfirmDialog, ElectionStatsBar, ElectionGrid, EmptyState, SearchFilterBar  } from "@/components";
+import { deleteElection, duplicateElection  } from "@/lib/api/server";
+import type { ElectionSummary, ElectionStatus } from "@/types";
 
 interface DashboardClientProps {
   elections: ElectionSummary[];

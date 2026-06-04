@@ -2,15 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ConfirmDialog } from "@/components/molecules/confirmDialog";
-import { CandidateImageField } from "@/components/molecules/candidateImageField";
-import { addCandidate } from "@/actions/candidate/add-candidate";
-import { updateCandidate } from "@/actions/candidate/update-candidate";
-import { removeCandidate } from "@/actions/candidate/remove-candidate";
+import Image from "next/image";
+import { Input } from "@/components";
+import { Textarea } from "@/components";
+import { Button } from "@/components";
+import { Badge } from "@/components";
+import { ConfirmDialog } from "@/components";
+import { CandidateImageField } from "@/components";
+import { addCandidate } from "@/lib/api/server/candidate/add-candidate";
+import { updateCandidate } from "@/lib/api/server/candidate/update-candidate";
+import { removeCandidate } from "@/lib/api/server/candidate/remove-candidate";
 import { Plus, Pencil, Trash2, Save, X, Vote } from "lucide-react";
 
 function candidateInitials(name: string): string {
@@ -33,7 +34,7 @@ function CandidateAvatar({
   if (imageUrl) {
     return (
       <div className={shell}>
-        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        <Image src={imageUrl} alt="" width={56} height={56} preload className="h-full w-full object-cover" />
       </div>
     );
   }

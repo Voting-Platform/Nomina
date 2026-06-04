@@ -1,11 +1,11 @@
 "use server";
 
-import { connectDB } from "@/lib/db";
+import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
 import { Candidate } from "@/models/Candidate";
 import { Vote } from "@/models/Vote";
 import { User } from "@/models/User";
-import { getOrSyncDbUser } from "@/actions/user";
+import { getOrSyncDbUser } from "@/lib/api/server/user";
 
 /**
  * Exports election data as CSV string.
