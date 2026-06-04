@@ -1,5 +1,4 @@
-import { getMyElections } from "@/lib/api/server/election/get-my-elections";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { getMyElections, getOrSyncDbUser } from "@/lib/api/server";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components";
 
