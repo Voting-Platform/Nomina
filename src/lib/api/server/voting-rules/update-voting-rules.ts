@@ -1,20 +1,15 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import type { VotingRulesInput } from "@/types/election";
+import { connectDB } from "@/config";
+import { Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import type { VotingRulesInput } from "@/types";
 
-/**
- * Updates election-level voting rules.
- * Controls max votes per voter, per candidate, and voter visibility.
- */
 export async function updateVotingRules(
   electionId: string,
   rules: VotingRulesInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -23,11 +18,11 @@ export async function updateVotingRules(
     deletedAt: null,
   });
   if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
+
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Validate rules
   if (rules.maxTotalVotesPerVoter < 1) {
     throw new Error("Max total votes per voter must be at least 1");
   }

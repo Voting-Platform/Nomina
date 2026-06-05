@@ -1,34 +1,27 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { connectDB } from "@/config";
+import { Candidate, Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
 
-/**
- * Reorders candidates by updating their position field.
- * Accepts an array of candidate IDs in the desired order.
- */
 export async function reorderCandidates(
   electionId: string,
   orderedIds: string[]
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
-  // Verify election ownership
   const election = await Election.findOne({
     _id: electionId,
     deletedAt: null,
   });
   if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
+
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Batch update positions
   const bulkOps = orderedIds.map((id, index) => ({
     updateOne: {
       filter: { _id: id, election: electionId },

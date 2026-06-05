@@ -1,20 +1,15 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import type { UpdateElectionInput } from "@/types/election";
+import { connectDB } from "@/config";
+import { Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import type { UpdateElectionInput } from "@/types";
 
-/**
- * Updates core election fields (title, description, voter base).
- * Only the election creator can update.
- */
 export async function updateElection(
   electionId: string,
   data: UpdateElectionInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -25,11 +20,10 @@ export async function updateElection(
 
   if (!election) throw new Error("Election not found");
 
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to edit this election");
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Apply updates
   if (data.title !== undefined) election.title = data.title;
   if (data.description !== undefined) election.description = data.description;
   if (data.voterBaseMode !== undefined)
@@ -39,7 +33,6 @@ export async function updateElection(
   if (data.allowedVoterDomains !== undefined)
     election.allowedVoterDomains = data.allowedVoterDomains;
 
-  // Regenerate slug if title changed
   if (data.title !== undefined) {
     const baseSlug = data.title
       .toLowerCase()

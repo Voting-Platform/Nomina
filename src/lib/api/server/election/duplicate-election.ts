@@ -1,17 +1,11 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { connectDB } from "@/config";
+import { Candidate, Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
 
-/**
- * Duplicates an election as a new draft.
- * Copies all settings and candidates but not votes.
- */
 export async function duplicateElection(electionId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -22,11 +16,10 @@ export async function duplicateElection(electionId: string) {
 
   if (!original) throw new Error("Election not found");
 
-  if (original.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to duplicate this election");
+  if (original.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Generate new slug
   const baseSlug = original.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -34,12 +27,11 @@ export async function duplicateElection(electionId: string) {
   const uniqueSuffix = Date.now().toString(36);
   const slug = `${baseSlug}-copy-${uniqueSuffix}`;
 
-  // Create duplicate election
   const duplicate = await Election.create({
     title: `${original.title} (Copy)`,
     description: original.description,
     slug,
-    createdBy: dbUser._id,
+    createdBy: user.id,
     status: "draft",
     schedulingMode: original.schedulingMode,
     maxTotalVotesPerVoter: original.maxTotalVotesPerVoter,
@@ -51,7 +43,6 @@ export async function duplicateElection(electionId: string) {
     electionLink: `${process.env.APP_BASE_URL}/vote/${slug}`,
   });
 
-  // Copy candidates
   const originalCandidates = await Candidate.find({
     election: electionId,
     deletedAt: null,

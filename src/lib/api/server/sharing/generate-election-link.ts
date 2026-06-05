@@ -2,15 +2,10 @@
 
 import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { requireAuth } from "@/lib/api/server/require-auth";
 
-/**
- * Generates (or regenerates) a shareable election link.
- * Updates the election's slug and electionLink field.
- */
 export async function generateElectionLink(electionId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -19,11 +14,11 @@ export async function generateElectionLink(electionId: string) {
     deletedAt: null,
   });
   if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
+
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Generate fresh link with current slug
   const link = `${process.env.APP_BASE_URL}/vote/${election.slug}`;
   election.electionLink = link;
   await election.save();
