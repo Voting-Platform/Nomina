@@ -1,30 +1,22 @@
 "use server";
 
 import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { Vote } from "@/models/Vote";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import type { ElectionSummary } from "@/types/election";
+import { Candidate, Vote, Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import type { ElectionSummary } from "@/types";
 
-/**
- * Returns all elections created by the current user.
- * Includes candidate count and total votes for each.
- */
 export async function getMyElections(): Promise<ElectionSummary[]> {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
   const elections = await Election.find({
-    createdBy: dbUser._id,
+    createdBy: user.id,
     deletedAt: null,
   })
     .sort({ createdAt: -1 })
     .lean();
 
-  // Batch fetch candidate counts and vote counts
   const electionIds = elections.map((e) => e._id);
 
   const candidateCounts = await Candidate.aggregate([

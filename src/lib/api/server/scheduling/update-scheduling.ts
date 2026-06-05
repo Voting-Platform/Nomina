@@ -1,20 +1,15 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import type { SchedulingInput } from "@/types/election";
+import { connectDB } from "@/config";
+import { Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import type { SchedulingInput } from "@/types";
 
-/**
- * Updates election scheduling configuration.
- * Switches between manual and automatic modes with date validation.
- */
 export async function updateScheduling(
   electionId: string,
   config: SchedulingInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -23,11 +18,11 @@ export async function updateScheduling(
     deletedAt: null,
   });
   if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
+
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Can only change scheduling if election is in draft or scheduled status
   if (!["draft", "scheduled"].includes(election.status)) {
     throw new Error("Cannot change scheduling for an active or closed election");
   }
@@ -49,7 +44,6 @@ export async function updateScheduling(
     election.scheduledStartAt = startAt;
     election.scheduledEndAt = endAt;
 
-    // Auto-set status based on timing
     if (startAt > new Date()) {
       election.status = "scheduled";
     } else if (endAt > new Date()) {
@@ -57,7 +51,6 @@ export async function updateScheduling(
       election.manuallyOpenedAt = new Date();
     }
   } else {
-    // Manual mode — clear scheduled dates
     election.scheduledStartAt = null;
     election.scheduledEndAt = null;
     election.status = "draft";

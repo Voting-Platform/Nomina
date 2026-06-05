@@ -1,21 +1,15 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import type { CandidatePrivilegesInput } from "@/types/election";
+import { connectDB } from "@/config";
+import { Candidate, Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import type { CandidatePrivilegesInput } from "@/types";
 
-/**
- * Updates per-candidate voting privileges.
- * Sets max receivable votes and eligibility for a specific candidate.
- */
 export async function updateCandidatePrivileges(
   candidateId: string,
   privileges: CandidatePrivilegesInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -25,17 +19,16 @@ export async function updateCandidatePrivileges(
   });
   if (!candidate) throw new Error("Candidate not found");
 
-  // Verify election ownership
   const election = await Election.findOne({
     _id: candidate.election,
     deletedAt: null,
   });
   if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
+
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Validate
   if (
     privileges.maxVotesReceivable !== null &&
     privileges.maxVotesReceivable < 1

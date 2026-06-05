@@ -1,19 +1,11 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { Vote } from "@/models/Vote";
-import { User } from "@/models/User";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { connectDB } from "@/config";
+import { Candidate, User, Vote, Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
 
-/**
- * Exports election data as CSV string.
- * Returns CSV content that the client can trigger as a download.
- */
 export async function exportElectionCsv(electionId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -24,11 +16,10 @@ export async function exportElectionCsv(electionId: string) {
 
   if (!election) throw new Error("Election not found");
 
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to export this election");
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Fetch candidates
   const candidates = await Candidate.find({
     election: electionId,
     deletedAt: null,
@@ -36,10 +27,8 @@ export async function exportElectionCsv(electionId: string) {
     .sort({ position: 1 })
     .lean();
 
-  // Fetch all votes with voter info
   const votes = await Vote.find({ election: electionId }).lean();
 
-  // Get unique voter IDs and fetch their info
   const voterIds = [...new Set(votes.map((v) => v.voter.toString()))];
   const voters = await User.find({ _id: { $in: voterIds } })
     .select("name email")
@@ -48,16 +37,12 @@ export async function exportElectionCsv(electionId: string) {
     voters.map((v) => [v._id.toString(), { name: v.name, email: v.email }])
   );
 
-  // Build vote count per candidate
   const voteCountMap = new Map<string, number>();
   votes.forEach((v) => {
     const key = v.candidate.toString();
     voteCountMap.set(key, (voteCountMap.get(key) || 0) + 1);
   });
 
-  // ─── Build CSV ───
-
-  // Section 1: Election Summary
   const lines: string[] = [];
   lines.push("ELECTION SUMMARY");
   lines.push(`Title,${csvEscape(election.title)}`);
@@ -68,7 +53,6 @@ export async function exportElectionCsv(electionId: string) {
   lines.push(`Unique Voters,${voterIds.length}`);
   lines.push("");
 
-  // Section 2: Candidate Results
   lines.push("CANDIDATE RESULTS");
   lines.push("Rank,Name,Description,Votes,Percentage");
   const sortedCandidates = candidates
@@ -89,7 +73,6 @@ export async function exportElectionCsv(electionId: string) {
   });
   lines.push("");
 
-  // Section 3: Vote Log (if voter visibility is enabled)
   if (election.allowVoterVisibility) {
     lines.push("VOTE LOG");
     lines.push("Voter Name,Voter Email,Candidate,Voted At");
@@ -110,7 +93,6 @@ export async function exportElectionCsv(electionId: string) {
   };
 }
 
-/** Escapes a string for CSV (wraps in quotes if it contains commas or quotes) */
 function csvEscape(str: string): string {
   if (!str) return "";
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {

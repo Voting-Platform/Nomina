@@ -1,35 +1,29 @@
 "use server";
 
 import { connectDB } from "@/config";
-import { Election,Candidate } from "@/models";
-import { getOrSyncDbUser } from "@/lib/api/server";
+import { Election, Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
 import { serialize } from "@/lib";
 import type { CreateCandidateInput } from "@/types";
 
-/**
- * Adds a new candidate to an election.
- * Auto-assigns position at the end of the list.
- */
 export async function addCandidate(
   electionId: string,
   data: CreateCandidateInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
-  // Verify election ownership
   const election = await Election.findOne({
     _id: electionId,
     deletedAt: null,
   });
   if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
+
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Forbidden");
   }
 
-  // Get next position
   const lastCandidate = await Candidate.findOne({
     election: electionId,
     deletedAt: null,

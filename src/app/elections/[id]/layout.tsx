@@ -1,6 +1,6 @@
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+
 import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ElectionDetailNav } from "@/components/organisms/electionDetailNav";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +13,6 @@ export default async function ElectionDetailLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) redirect("/api/auth/signin");
 
   const election = await getElectionById(id).catch((err) => {
     console.error(`[ElectionDetailLayout] getElectionById("${id}") failed:`, err);

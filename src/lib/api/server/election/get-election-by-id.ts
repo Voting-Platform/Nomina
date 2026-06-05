@@ -1,19 +1,12 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { Vote } from "@/models/Vote";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import { serialize } from "@/lib/serialize";
+import { connectDB } from "@/config";
+import { Candidate, Vote, Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { serialize } from "@/lib";
 
-/**
- * Fetches a single election by ID with its candidates and vote counts.
- * Only the election creator can access it.
- */
 export async function getElectionById(electionId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -24,12 +17,10 @@ export async function getElectionById(electionId: string) {
 
   if (!election) throw new Error("Election not found");
 
-  // Verify ownership
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to view this election");
+  if (election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
-  // Fetch candidates
   const candidates = await Candidate.find({
     election: electionId,
     deletedAt: null,
@@ -37,17 +28,18 @@ export async function getElectionById(electionId: string) {
     .sort({ position: 1 })
     .lean();
 
-  // Fetch vote counts per candidate
   const voteCounts = await Vote.aggregate([
     { $match: { election: election._id } },
     { $group: { _id: "$candidate", count: { $sum: 1 } } },
   ]);
 
   const voteCountMap = new Map(
-    voteCounts.map((v: { _id: string; count: number }) => [v._id.toString(), v.count])
+    voteCounts.map((v: { _id: string; count: number }) => [
+      v._id.toString(),
+      v.count,
+    ]),
   );
 
-  // Enrich candidates with vote counts — fully serialized
   const enrichedCandidates = candidates.map((c) => ({
     ...serialize(c),
     _id: c._id.toString(),
@@ -55,13 +47,11 @@ export async function getElectionById(electionId: string) {
     voteCount: voteCountMap.get(c._id.toString()) || 0,
   }));
 
-  // Total votes for the election
   const totalVotes = voteCounts.reduce(
     (sum: number, v: { count: number }) => sum + v.count,
-    0
+    0,
   );
 
-  // Unique voter count (using aggregation instead of distinct for apiStrict compatibility)
   const uniqueVoterResult = await Vote.aggregate([
     { $match: { election: election._id } },
     { $group: { _id: "$voter" } },

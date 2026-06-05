@@ -1,4 +1,4 @@
-export { getOrSyncDbUser } from './user';
+
 export * from './candidate';
 export * from './election';
 export * from './scheduling';
