@@ -1,5 +1,6 @@
 import "server-only";
 import { auth } from "@/auth";
+import { Types } from "mongoose";
 import type { UserRole } from "@/types";
 
 type AuthUser = {
@@ -12,7 +13,10 @@ type AuthUser = {
 
 export async function requireAuth(): Promise<AuthUser> {
     const session = await auth();
-    if (!session?.user?.id) {
+    // Auth.js v5 may populate user.id with an internal UUID when the DB
+    // lookup fails on first sign-in. Reject any id that isn't a valid
+    // MongoDB ObjectId so it never reaches Mongoose queries.
+    if (!session?.user?.id || !Types.ObjectId.isValid(session.user.id)) {
         throw new Error("Unauthorized");
     }
     return session.user as AuthUser;

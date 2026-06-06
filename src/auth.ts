@@ -20,12 +20,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Runs only on first sign-in — embed DB user data into the token
+        // Runs only on first sign-in — embed DB user data into the token.
+        // Auth.js v5 sets user.id to an internal UUID; we must replace it
+        // with the MongoDB ObjectId so server actions can query by createdBy.
         const dbUser = await getDBUser(user.email!);
         if (dbUser) {
           token.id = dbUser._id;
           token.role = dbUser.role;
           token.picture = dbUser.picture;
+        } else {
+          // verifyUser should have created the user already; if not found
+          // here, clear token.id so requireAuth() rejects cleanly instead
+          // of passing the Auth.js UUID into MongoDB queries.
+          token.id = undefined;
         }
       }
       return token;
