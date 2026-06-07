@@ -2,10 +2,11 @@
 
 import { connectDB } from "@/config";
 import { Candidate, User, Vote, Election } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 
 export async function exportElectionCsv(electionId: string) {
   const user = await requireAuth();
+  assertObjectId(electionId, "Election");
 
   await connectDB();
 
@@ -14,10 +15,8 @@ export async function exportElectionCsv(electionId: string) {
     deletedAt: null,
   }).lean();
 
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!election || election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   const candidates = await Candidate.find({
@@ -95,6 +94,9 @@ export async function exportElectionCsv(electionId: string) {
 
 function csvEscape(str: string): string {
   if (!str) return "";
+  // Neutralise spreadsheet formula injection (Excel, Google Sheets).
+  // A leading =, +, -, @, tab, or carriage-return triggers formula execution.
+  if (/^[=+\-@\t\r]/.test(str)) str = `\t${str}`;
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
     return `"${str.replace(/"/g, '""')}"`;
   }

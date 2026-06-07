@@ -3,10 +3,12 @@
 import { connectDB } from "@/config";
 import { Candidate, Election } from "@/models/";
 import { requireAuth } from "@/lib/api/server/require-auth";
+import { CreateElectionSchema } from "@/lib/api/server/schemas";
 import type { CreateElectionInput } from "@/types";
 
 export async function createElection(data: CreateElectionInput) {
   const user = await requireAuth();
+  CreateElectionSchema.parse(data);
 
   await connectDB();
 

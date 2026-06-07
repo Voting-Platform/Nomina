@@ -2,7 +2,7 @@
 
 import { connectDB } from "@/config";
 import { Election } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 import type { SchedulingInput } from "@/types";
 
 export async function updateScheduling(
@@ -10,6 +10,7 @@ export async function updateScheduling(
   config: SchedulingInput
 ) {
   const user = await requireAuth();
+  assertObjectId(electionId, "Election");
 
   await connectDB();
 
@@ -17,10 +18,8 @@ export async function updateScheduling(
     _id: electionId,
     deletedAt: null,
   });
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!election || election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   if (!["draft", "scheduled"].includes(election.status)) {

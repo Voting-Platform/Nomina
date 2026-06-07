@@ -14,8 +14,7 @@ export default async function ElectionDetailLayout({
 }) {
   const { id } = await params;
 
-  const election = await getElectionById(id).catch((err) => {
-    console.error(`[ElectionDetailLayout] getElectionById("${id}") failed:`, err);
+  const election = await getElectionById(id).catch(() => {
     notFound();
   });
 

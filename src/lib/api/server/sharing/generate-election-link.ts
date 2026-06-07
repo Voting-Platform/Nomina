@@ -2,10 +2,11 @@
 
 import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 
 export async function generateElectionLink(electionId: string) {
   const user = await requireAuth();
+  assertObjectId(electionId, "Election");
 
   await connectDB();
 
@@ -13,10 +14,8 @@ export async function generateElectionLink(electionId: string) {
     _id: electionId,
     deletedAt: null,
   });
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!election || election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   const link = `${process.env.APP_BASE_URL}/vote/${election.slug}`;

@@ -2,10 +2,11 @@
 
 import { connectDB } from "@/config";
 import { Candidate, Election } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 
 export async function removeCandidate(candidateId: string) {
   const user = await requireAuth();
+  assertObjectId(candidateId, "Candidate");
 
   await connectDB();
 
@@ -19,10 +20,8 @@ export async function removeCandidate(candidateId: string) {
     _id: candidate.election,
     deletedAt: null,
   });
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!election || election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   candidate.deletedAt = new Date();

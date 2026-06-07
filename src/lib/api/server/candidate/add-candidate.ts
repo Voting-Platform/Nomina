@@ -2,7 +2,8 @@
 
 import { connectDB } from "@/config";
 import { Election, Candidate } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
+import { CreateCandidateSchema } from "@/lib/api/server/schemas";
 import { serialize } from "@/lib";
 import type { CreateCandidateInput } from "@/types";
 
@@ -11,6 +12,8 @@ export async function addCandidate(
   data: CreateCandidateInput
 ) {
   const user = await requireAuth();
+  assertObjectId(electionId, "Election");
+  CreateCandidateSchema.parse(data);
 
   await connectDB();
 
@@ -18,10 +21,8 @@ export async function addCandidate(
     _id: electionId,
     deletedAt: null,
   });
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!election || election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   const lastCandidate = await Candidate.findOne({

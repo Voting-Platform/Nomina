@@ -2,7 +2,7 @@
 
 import { connectDB } from "@/config";
 import { Candidate, Election } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 import type { CandidatePrivilegesInput } from "@/types";
 
 export async function updateCandidatePrivileges(
@@ -10,6 +10,7 @@ export async function updateCandidatePrivileges(
   privileges: CandidatePrivilegesInput
 ) {
   const user = await requireAuth();
+  assertObjectId(candidateId, "Candidate");
 
   await connectDB();
 
@@ -23,10 +24,8 @@ export async function updateCandidatePrivileges(
     _id: candidate.election,
     deletedAt: null,
   });
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!election || election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   if (

@@ -2,11 +2,12 @@
 
 import { connectDB } from "@/config";
 import { Candidate, Vote, Election } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 import { serialize } from "@/lib";
 
 export async function getElectionById(electionId: string) {
   const user = await requireAuth();
+  assertObjectId(electionId, "Election");
 
   await connectDB();
 

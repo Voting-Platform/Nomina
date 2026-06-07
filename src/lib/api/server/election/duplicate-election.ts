@@ -2,10 +2,11 @@
 
 import { connectDB } from "@/config";
 import { Candidate, Election } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 
 export async function duplicateElection(electionId: string) {
   const user = await requireAuth();
+  assertObjectId(electionId, "Election");
 
   await connectDB();
 
@@ -14,10 +15,8 @@ export async function duplicateElection(electionId: string) {
     deletedAt: null,
   }).lean();
 
-  if (!original) throw new Error("Election not found");
-
-  if (original.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!original || original.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   const baseSlug = original.title

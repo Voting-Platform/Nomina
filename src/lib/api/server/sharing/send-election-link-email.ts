@@ -2,13 +2,14 @@
 
 import { connectDB } from "@/config";
 import { Election } from "@/models";
-import { requireAuth } from "@/lib/api/server/require-auth";
+import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
 
 export async function sendElectionLinkEmail(
   electionId: string,
   emails: string[]
 ) {
   const user = await requireAuth();
+  assertObjectId(electionId, "Election");
 
   await connectDB();
 
@@ -16,10 +17,12 @@ export async function sendElectionLinkEmail(
     _id: electionId,
     deletedAt: null,
   });
-  if (!election) throw new Error("Election not found");
+  if (!election || election.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
+  }
 
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!Array.isArray(emails) || emails.length > 200) {
+    throw new Error("Too many email addresses (max 200 per send)");
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
