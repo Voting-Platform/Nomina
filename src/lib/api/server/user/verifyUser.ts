@@ -8,8 +8,10 @@ export async function verifyUser(user: UserType | AdapterUser): Promise<boolean>
     await connectDB();
     const existingUser = await User.findOne({ email: user.email });
     if (!existingUser) {
+        // name is required — fall back to the email prefix if Google doesn't
+        // provide a display name, to prevent a Mongoose validation error.
         await new User({
-            name: user.name,
+            name: user.name ?? user.email?.split("@")[0] ?? "User",
             email: user.email,
             googleId: user.id,
             picture: user.image,

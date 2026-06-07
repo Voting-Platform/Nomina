@@ -6,11 +6,21 @@ export const authConfig = {
         error: "/error",
     },
     callbacks: {
+        // Must live here (not only in auth.ts) so the proxy middleware can
+        // map token.id → session.user.id before the authorized check runs.
+        // Without this, the middleware sees the raw Auth.js UUID instead of
+        // the MongoDB ObjectId, so hasValidId is always false → redirect loop.
+        session({ session, token }) {
+            return {
+                ...session,
+                user: {
+                    ...session.user,
+                    id: token.id as string,
+                },
+            };
+        },
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
-            // Auth.js v5 can assign an internal UUID to user.id when the DB
-            // lookup fails on first sign-in. Only treat a 24-char hex string
-            // (MongoDB ObjectId) as a valid session.
             const hasValidId = /^[a-f\d]{24}$/i.test(auth?.user?.id ?? "");
             const { pathname } = nextUrl;
             const isProtected =

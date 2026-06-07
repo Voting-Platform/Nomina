@@ -1,9 +1,10 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { verifyUser } from "@/lib/api/server/user/verifyUser";
-import { getDBUser } from "@/lib/api/server/user/getDBUser";
 import type { UserRole } from "@/types";
 import { authConfig } from "./auth.config";
+import { connectDB } from "@/config";
+import { User } from "@/models";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -20,19 +21,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Runs only on first sign-in — embed DB user data into the token.
-        // Auth.js v5 sets user.id to an internal UUID; we must replace it
-        // with the MongoDB ObjectId so server actions can query by createdBy.
-        const dbUser = await getDBUser(user.email!);
+        // Runs only on first sign-in. Use a single atomic upsert so we
+        // never end up with a failed lookup after a successful create.
+        // $setOnInsert leaves existing users untouched.
+        await connectDB();
+        const dbUser = await User.findOneAndUpdate(
+          { email: user.email },
+          {
+            $setOnInsert: {
+              name: user.name ?? user.email?.split("@")[0] ?? "User",
+              email: user.email,
+              googleId: user.id,
+              picture: user.image,
+            },
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        ).lean<{ _id: { toString(): string }; role: UserRole; picture?: string }>();
+
         if (dbUser) {
-          token.id = dbUser._id;
+          token.id = dbUser._id.toString();
           token.role = dbUser.role;
-          token.picture = dbUser.picture;
-        } else {
-          // verifyUser should have created the user already; if not found
-          // here, clear token.id so requireAuth() rejects cleanly instead
-          // of passing the Auth.js UUID into MongoDB queries.
-          token.id = undefined;
+          token.picture = dbUser.picture ?? null;
         }
       }
       return token;
