@@ -2,17 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { VotingRulesForm } from "@/components/organisms/createElectionWizard/forms/votingRulesForm";
-import { updateVotingRules } from "@/lib/api/server/voting-rules/update-voting-rules";
-import { updateCandidatePrivileges } from "@/lib/api/server/voting-rules/update-candidate-privileges";
-import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
-import type { VotingRulesInput } from "@/types/election";
-import type { ElectionDetailData } from "@/types";
+import { Button, Input, Label, Switch, Separator, VotingRulesForm } from "@/components";
+import { updateVotingRules, updateCandidatePrivileges, getElectionById } from "@/lib/api/server";
+import type { ElectionDetailData, VotingRulesInput } from "@/types";
 import { Save, ShieldCheck } from "lucide-react";
 
 interface RulesManagerProps {
@@ -25,9 +17,9 @@ export function RulesManager({ electionId, initialData }: RulesManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [initialDataTimestamp] = useState(() => Date.now());
 
-  const { data: election } = useQuery({
+  const { data: election } = useQuery<ElectionDetailData>({
     queryKey: ["election", electionId],
-    queryFn: () => getElectionById(electionId),
+    queryFn: () => getElectionById(electionId) as Promise<ElectionDetailData>,
     initialData,
     initialDataUpdatedAt: initialDataTimestamp,
   });

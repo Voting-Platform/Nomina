@@ -14,7 +14,7 @@ import { updateCandidate } from "@/lib/api/server/candidate/update-candidate";
 import { removeCandidate } from "@/lib/api/server/candidate/remove-candidate";
 import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
 import { Plus, Pencil, Trash2, Save, X, Vote } from "lucide-react";
-import type { ElectionDetailData } from "@/types";
+import type { ElectionDetailData, CandidateWithVoteCount } from "@/types";
 
 function candidateInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -61,9 +61,9 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
   const [isPending, startTransition] = useTransition();
   const [initialDataTimestamp] = useState(() => Date.now());
 
-  const { data: election } = useQuery({
+  const { data: election } = useQuery<ElectionDetailData>({
     queryKey: ["election", electionId],
-    queryFn: () => getElectionById(electionId),
+    queryFn: () => getElectionById(electionId) as Promise<ElectionDetailData>,
     initialData,
     initialDataUpdatedAt: initialDataTimestamp,
   });
@@ -142,7 +142,7 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
     <div className="space-y-4">
       {/* Candidate list */}
       <div className="space-y-3">
-        {candidates.map((c, i) => (
+        {candidates.map((c: CandidateWithVoteCount, i: number) => (
           <div
             key={c._id}
             className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-all duration-200 hover:border-[var(--primary)]/20"
