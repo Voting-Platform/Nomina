@@ -23,7 +23,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <DashboardClient elections={elections} />
+        <DashboardClient initialData={elections} />
       </main>
     </div>
   );

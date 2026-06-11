@@ -1,22 +1,32 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { Button, ConfirmDialog, ElectionStatsBar, ElectionGrid, EmptyState, SearchFilterBar } from "@/components";
-import { useDeleteElection, useDuplicateElection } from "@/hooks/election";
+import { useDeleteElection, useDuplicateElection } from "@/hooks";
+import { getMyElections } from "@/lib/";
 import type { ElectionSummary, ElectionStatus } from "@/types";
 
 interface DashboardClientProps {
-  elections: ElectionSummary[];
+  initialData: ElectionSummary[];
 }
 
-export function DashboardClient({ elections }: DashboardClientProps) {
+export function DashboardClient({ initialData }: DashboardClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ElectionStatus | "all">("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [initialDataTimestamp] = useState(() => Date.now());
+
+  const { data: elections = [] } = useQuery({
+    queryKey: ["elections"],
+    queryFn: getMyElections,
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
+  });
 
   const deleteMutation = useDeleteElection();
   const duplicateMutation = useDuplicateElection();
@@ -80,16 +90,15 @@ export function DashboardClient({ elections }: DashboardClientProps) {
           <p className="text-sm text-[var(--text-secondary)]">
             No elections match your search
           </p>
-          <button
-            type="button"
+          <Button
             onClick={() => {
               setSearchQuery("");
               setStatusFilter("all");
             }}
-            className="mt-2 text-sm text-[var(--primary)] hover:underline"
+            className="mt-2 text-sm hover:underline"
           >
             Clear filters
-          </button>
+          </Button>
         </div>
       ) : (
         <ElectionGrid

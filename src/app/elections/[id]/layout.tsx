@@ -1,7 +1,6 @@
 
-import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
+import { getElectionById } from "@/lib/api/server";
 import { notFound } from "next/navigation";
-import { ElectionDetailNav } from "@/components/organisms/electionDetailNav";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +20,6 @@ export default async function ElectionDetailLayout({
 
   return (
     <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      {/* Election header */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
           {election.title}
@@ -32,12 +30,7 @@ export default async function ElectionDetailLayout({
           </p>
         )}
       </div>
-
-      {/* Tab navigation */}
-      <ElectionDetailNav electionId={id} />
-
-      {/* Page content */}
-      <div className="mt-6">{children}</div>
+      {children}
     </main>
   );
 }

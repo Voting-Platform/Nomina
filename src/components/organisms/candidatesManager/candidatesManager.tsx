@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { Input } from "@/components";
 import { Textarea } from "@/components";
@@ -12,7 +12,9 @@ import { CandidateImageField } from "@/components";
 import { addCandidate } from "@/lib/api/server/candidate/add-candidate";
 import { updateCandidate } from "@/lib/api/server/candidate/update-candidate";
 import { removeCandidate } from "@/lib/api/server/candidate/remove-candidate";
+import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
 import { Plus, Pencil, Trash2, Save, X, Vote } from "lucide-react";
+import type { ElectionDetailData } from "@/types";
 
 function candidateInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -49,23 +51,24 @@ function CandidateAvatar({
   );
 }
 
-interface CandidateData {
-  _id: string;
-  name: string;
-  description: string;
-  imageUrl: string | null;
-  position: number;
-  voteCount: number;
-}
-
 interface CandidatesManagerProps {
   electionId: string;
-  initialCandidates: CandidateData[];
+  initialData: ElectionDetailData;
 }
 
-export function CandidatesManager({ electionId, initialCandidates }: CandidatesManagerProps) {
-  const router = useRouter();
+export function CandidatesManager({ electionId, initialData }: CandidatesManagerProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
+  const [initialDataTimestamp] = useState(() => Date.now());
+
+  const { data: election } = useQuery({
+    queryKey: ["election", electionId],
+    queryFn: () => getElectionById(electionId),
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
+  });
+
+  const candidates = election.candidates;
 
   // Add candidate state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -95,11 +98,11 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
       setNewDescription("");
       setNewImageUrl(undefined);
       setShowAddForm(false);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
-  const startEdit = (c: CandidateData) => {
+  const startEdit = (c: typeof candidates[number]) => {
     setEditId(c._id);
     setEditName(c.name);
     setEditDesc(c.description);
@@ -121,7 +124,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
       });
       setEditId(null);
       setEditImageUrl(undefined);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
@@ -131,7 +134,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
       await removeCandidate(deleteId);
       setDeleteDialogOpen(false);
       setDeleteId(null);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
@@ -139,7 +142,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
     <div className="space-y-4">
       {/* Candidate list */}
       <div className="space-y-3">
-        {initialCandidates.map((c, i) => (
+        {candidates.map((c, i) => (
           <div
             key={c._id}
             className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-all duration-200 hover:border-[var(--primary)]/20"

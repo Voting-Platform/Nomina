@@ -69,6 +69,12 @@ export interface CandidateWithVoteCount extends CandidateDocument {
   voteCount: number;
 }
 
+export interface ElectionDetailData extends ElectionDocument {
+  candidates: CandidateWithVoteCount[];
+  totalVotes: number;
+  uniqueVoterCount: number;
+}
+
 export interface ElectionSummary {
   _id: string;
   title: string;

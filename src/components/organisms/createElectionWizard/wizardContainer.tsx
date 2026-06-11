@@ -4,21 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Rocket } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { StepIndicator } from "@/components/molecules/stepIndicator";
-import { BasicInfoForm } from "@/components/organisms/createElectionWizard/forms/basicInfoForm";
-import { CandidateEntryForm } from "@/components/organisms/createElectionWizard/forms/candidateEntryForm";
-import { VotingRulesForm } from "@/components/organisms/createElectionWizard/forms/votingRulesForm";
-import { VoterBaseForm } from "@/components/organisms/createElectionWizard/forms/voterBaseForm";
-import { SchedulingForm } from "@/components/organisms/createElectionWizard/forms/schedulingForm";
-import { ReviewSummary } from "@/components/organisms/createElectionWizard/reviewSummary";
-import { createElection } from "@/lib/api/server/election/create-election";
+import { Button,BasicInfoForm, CandidateEntryForm, VotingRulesForm, VoterBaseForm, StepIndicator,SchedulingForm ,ReviewSummary} from "@/components";
+import { createElection } from "@/lib/api/server";
 import type {
   CreateCandidateInput,
   VotingRulesInput,
   VoterBaseInput,
   SchedulingInput,
-} from "@/types/election";
+} from "@/types";
 
 const STEPS = [
   { label: "Basic Info" },

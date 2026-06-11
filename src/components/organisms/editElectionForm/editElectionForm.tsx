@@ -1,41 +1,42 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { updateElection } from "@/lib/api/server/election/update-election";
+import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
 import { VoterBaseForm } from "@/components/organisms/createElectionWizard/forms/voterBaseForm";
 import type { VoterBaseMode, VoterBaseInput } from "@/types/election";
+import type { ElectionDetailData } from "@/types";
 import { Save } from "lucide-react";
 
 interface EditElectionFormProps {
   electionId: string;
-  initialTitle: string;
-  initialDescription: string;
-  initialVoterBaseMode: string;
-  initialAllowedEmails: string[];
-  initialAllowedDomains: string[];
+  initialData: ElectionDetailData;
 }
 
-export function EditElectionForm({
-  electionId,
-  initialTitle,
-  initialDescription,
-  initialVoterBaseMode,
-  initialAllowedEmails,
-  initialAllowedDomains,
-}: EditElectionFormProps) {
-  const router = useRouter();
+export function EditElectionForm({ electionId, initialData }: EditElectionFormProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const [title, setTitle] = useState(initialTitle);
-  const [description, setDescription] = useState(initialDescription);
+  const [initialDataTimestamp] = useState(() => Date.now());
+
+  useQuery({
+    queryKey: ["election", electionId],
+    queryFn: () => getElectionById(electionId),
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
+  });
+
+  // Form state is seeded from initialData on mount and stays independent after that
+  const [title, setTitle] = useState(initialData.title);
+  const [description, setDescription] = useState(initialData.description);
   const [voterBase, setVoterBase] = useState<VoterBaseInput>({
-    mode: initialVoterBaseMode as VoterBaseMode,
-    emails: initialAllowedEmails,
-    domains: initialAllowedDomains,
+    mode: initialData.voterBaseMode as VoterBaseMode,
+    emails: initialData.allowedVoterEmails,
+    domains: initialData.allowedVoterDomains,
   });
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -57,7 +58,7 @@ export function EditElectionForm({
         });
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: ["election", electionId] });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update");
       }

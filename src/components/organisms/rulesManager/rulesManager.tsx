@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,26 +10,33 @@ import { Separator } from "@/components/ui/separator";
 import { VotingRulesForm } from "@/components/organisms/createElectionWizard/forms/votingRulesForm";
 import { updateVotingRules } from "@/lib/api/server/voting-rules/update-voting-rules";
 import { updateCandidatePrivileges } from "@/lib/api/server/voting-rules/update-candidate-privileges";
+import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
 import type { VotingRulesInput } from "@/types/election";
+import type { ElectionDetailData } from "@/types";
 import { Save, ShieldCheck } from "lucide-react";
-
-interface CandidateData {
-  _id: string;
-  name: string;
-  maxVotesReceivable: number | null;
-  isEligibleForVoting: boolean;
-}
 
 interface RulesManagerProps {
   electionId: string;
-  initialRules: VotingRulesInput;
-  candidates: CandidateData[];
+  initialData: ElectionDetailData;
 }
 
-export function RulesManager({ electionId, initialRules, candidates }: RulesManagerProps) {
-  const router = useRouter();
+export function RulesManager({ electionId, initialData }: RulesManagerProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const [rules, setRules] = useState(initialRules);
+  const [initialDataTimestamp] = useState(() => Date.now());
+
+  const { data: election } = useQuery({
+    queryKey: ["election", electionId],
+    queryFn: () => getElectionById(electionId),
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
+  });
+
+  const [rules, setRules] = useState<VotingRulesInput>({
+    maxTotalVotesPerVoter: initialData.maxTotalVotesPerVoter,
+    maxVotesPerCandidate: initialData.maxVotesPerCandidate,
+    allowVoterVisibility: initialData.allowVoterVisibility,
+  });
   const [saved, setSaved] = useState(false);
 
   const handleSaveRules = () => {
@@ -37,19 +44,19 @@ export function RulesManager({ electionId, initialRules, candidates }: RulesMana
       await updateVotingRules(electionId, rules);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
   const handleUpdatePrivileges = (candidateId: string, field: string, value: number | null | boolean) => {
     startTransition(async () => {
-      const candidate = candidates.find((c) => c._id === candidateId);
+      const candidate = election.candidates.find((c) => c._id === candidateId);
       if (!candidate) return;
       await updateCandidatePrivileges(candidateId, {
         maxVotesReceivable: field === "maxVotesReceivable" ? (value as number | null) : candidate.maxVotesReceivable,
         isEligibleForVoting: field === "isEligibleForVoting" ? (value as boolean) : candidate.isEligibleForVoting,
       });
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
@@ -78,7 +85,7 @@ export function RulesManager({ electionId, initialRules, candidates }: RulesMana
           Per-Candidate Privileges
         </h3>
         <div className="space-y-3">
-          {candidates.map((c) => (
+          {election.candidates.map((c) => (
             <div key={c._id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-[var(--text-primary)]">{c.name}</p>

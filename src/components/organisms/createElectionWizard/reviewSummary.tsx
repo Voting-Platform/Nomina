@@ -1,7 +1,8 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import type { CreateElectionInput } from "@/types/election";
+import { Badge } from "@/components";
+import type { CreateElectionInput } from "@/types";
+import Image from "next/image";
 
 interface ReviewSummaryProps {
   data: CreateElectionInput;
@@ -38,9 +39,11 @@ export function ReviewSummary({ data }: ReviewSummaryProps) {
           {data.candidates.map((c, i) => (
             <div key={i} className="flex items-center gap-2 min-w-0">
               {c.imageUrl ? (
-                <img
+                <Image
                   src={c.imageUrl}
                   alt=""
+                  width={36}
+                  height={36}
                   className="h-9 w-9 shrink-0 rounded-lg border border-[var(--border)] object-cover"
                 />
               ) : null}

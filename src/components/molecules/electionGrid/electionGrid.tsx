@@ -1,7 +1,7 @@
 "use client";
 
-import { ElectionCard } from "@/components/molecules/electionCard";
-import type { ElectionSummary } from "@/types/election";
+import { ElectionCard } from "@/components";
+import type { ElectionSummary } from "@/types";
 
 interface ElectionGridProps {
   elections: ElectionSummary[];

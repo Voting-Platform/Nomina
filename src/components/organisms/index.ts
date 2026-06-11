@@ -6,5 +6,5 @@ export { RulesManager } from "./rulesManager";
 export { ScheduleManager } from "./scheduleManager";
 export { ResultsView } from "./resultsView";
 export { ElectionDetailNav } from "./electionDetailNav";
-export { WizardContainer, ReviewSummary } from "./createElectionWizard";
+export { WizardContainer, ReviewSummary, BasicInfoForm, CandidateEntryForm, VotingRulesForm, VoterBaseForm,SchedulingForm  } from "./createElectionWizard";
 export { DashboardClient } from "./dashboardClient";
