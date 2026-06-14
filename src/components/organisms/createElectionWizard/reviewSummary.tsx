@@ -1,7 +1,8 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import type { CreateElectionInput } from "@/types/election";
+import { Badge } from "@/components";
+import type { CreateElectionInput } from "@/types";
+import Image from "next/image";
 
 interface ReviewSummaryProps {
   data: CreateElectionInput;
@@ -38,9 +39,11 @@ export function ReviewSummary({ data }: ReviewSummaryProps) {
           {data.candidates.map((c, i) => (
             <div key={i} className="flex items-center gap-2 min-w-0">
               {c.imageUrl ? (
-                <img
+                <Image
                   src={c.imageUrl}
                   alt=""
+                  width={36}
+                  height={36}
                   className="h-9 w-9 shrink-0 rounded-lg border border-[var(--border)] object-cover"
                 />
               ) : null}
@@ -63,7 +66,7 @@ export function ReviewSummary({ data }: ReviewSummaryProps) {
         <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
           Voting Rules
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
             <span className="text-xs text-[var(--text-muted)]">Max votes per voter</span>
             <p className="font-medium text-[var(--text-primary)]">{data.votingRules.maxTotalVotesPerVoter}</p>
@@ -72,28 +75,45 @@ export function ReviewSummary({ data }: ReviewSummaryProps) {
             <span className="text-xs text-[var(--text-muted)]">Max per candidate</span>
             <p className="font-medium text-[var(--text-primary)]">{data.votingRules.maxVotesPerCandidate}</p>
           </div>
-          <div>
-            <span className="text-xs text-[var(--text-muted)]">Voter visibility</span>
-            <Badge variant={data.votingRules.allowVoterVisibility ? "warning" : "outline"}>
-              {data.votingRules.allowVoterVisibility ? "Visible" : "Hidden"}
-            </Badge>
-          </div>
         </div>
       </section>
 
-      {/* Voter Base */}
+      {/* Voter Access */}
       <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-          Voter Base
+          Voter Access
         </h3>
-        <div className="text-sm">
-          <Badge variant="info">
-            {data.voterBase.mode === "anyone_with_link"
-              ? "Anyone with link"
-              : data.voterBase.mode === "restricted_emails"
-                ? `${(data.voterBase.emails || []).length} specific emails`
-                : `@${(data.voterBase.domains || [])[0] || "domain"}`}
-          </Badge>
+        <div className="space-y-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="info">
+              {data.voterAccess.accessType === "public"
+                ? data.voterAccess.pinEnabled
+                  ? "Public · PIN protected"
+                  : "Public"
+                : data.voterAccess.otpRequired
+                  ? "Protected · OTP verification"
+                  : "Protected"}
+            </Badge>
+            {data.voterAccess.accessType === "protected" && (
+              <Badge variant="outline">
+                {data.voterAccess.voters.length} invited voter(s)
+              </Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <span className="text-xs text-[var(--text-muted)]">Collect voter details</span>
+              <p className="font-medium text-[var(--text-primary)]">
+                {data.voterAccess.collectVoterDetails ? "Yes — name & email" : "No"}
+              </p>
+            </div>
+            <div>
+              <span className="text-xs text-[var(--text-muted)]">Voter identities</span>
+              <Badge variant={data.voterAccess.revealVoterIdentities ? "warning" : "outline"}>
+                {data.voterAccess.revealVoterIdentities ? "Revealed to organizer" : "Anonymous"}
+              </Badge>
+            </div>
+          </div>
         </div>
       </section>
 

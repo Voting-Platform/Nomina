@@ -2,7 +2,6 @@
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import type { VotingRulesInput } from "@/types/election";
 
 interface VotingRulesFormProps {
@@ -68,28 +67,10 @@ export function VotingRulesForm({ rules, onRulesChange, errors, disabled }: Voti
         />
       </div>
 
-      {/* Voter visibility */}
-      <div className="flex items-start justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-        <div className="space-y-1">
-          <Label htmlFor="voter-visibility">Show voters under candidates</Label>
-          <p className="text-xs text-[var(--text-muted)]">
-            When enabled, voter names will be visible under each candidate they voted for.
-          </p>
-          {rules.allowVoterVisibility && (
-            <p className="text-xs text-[var(--warning)] flex items-center gap-1 mt-1">
-              ⚠️ This may affect voter privacy
-            </p>
-          )}
-        </div>
-        <Switch
-          id="voter-visibility"
-          checked={rules.allowVoterVisibility}
-          onCheckedChange={(checked) =>
-            onRulesChange({ ...rules, allowVoterVisibility: checked as boolean })
-          }
-          disabled={disabled}
-        />
-      </div>
+      <p className="text-xs text-[var(--text-muted)]">
+        Voter privacy options (anonymity, collecting details) are configured in
+        the next step.
+      </p>
     </div>
   );
 }

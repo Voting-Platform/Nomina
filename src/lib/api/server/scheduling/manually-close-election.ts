@@ -1,28 +1,12 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import { serialize } from "@/lib/serialize";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
 
-/**
- * Manually closes an open election.
- * Only works in manual scheduling mode when election is currently open.
- */
 export async function manuallyCloseElection(electionId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
-  await connectDB();
-
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
-  }
+  const election = await getOwnedElection(electionId, user.id);
 
   if (election.schedulingMode !== "manual") {
     throw new Error("This election uses automatic scheduling");
@@ -37,5 +21,7 @@ export async function manuallyCloseElection(electionId: string) {
 
   await election.save();
 
-  return serialize(election.toObject());
+  const result = election.toObject();
+  result._id = result._id.toString();
+  return result;
 }

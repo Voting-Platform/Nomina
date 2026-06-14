@@ -1,48 +1,36 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { updateElection } from "@/lib/api/server/election/update-election";
-import { VoterBaseForm } from "@/components/organisms/createElectionWizard/forms/voterBaseForm";
-import type { VoterBaseMode, VoterBaseInput } from "@/types/election";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Input, Textarea, Label, Button } from "@/components";
+import { updateElection, getElectionById } from "@/lib/api/server";
+import type { ElectionDetailData } from "@/types";
 import { Save, AlertTriangle } from "lucide-react";
 
 interface EditElectionFormProps {
   electionId: string;
-  initialTitle: string;
-  initialDescription: string;
-  initialVoterBaseMode: string;
-  initialAllowedEmails: string[];
-  initialAllowedDomains: string[];
-  status: string;
+  initialData: ElectionDetailData;
 }
 
-export function EditElectionForm({
-  electionId,
-  initialTitle,
-  initialDescription,
-  initialVoterBaseMode,
-  initialAllowedEmails,
-  initialAllowedDomains,
-  status,
-}: EditElectionFormProps) {
-  const router = useRouter();
+export function EditElectionForm({ electionId, initialData }: EditElectionFormProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const [title, setTitle] = useState(initialTitle);
-  const [description, setDescription] = useState(initialDescription);
-  const [voterBase, setVoterBase] = useState<VoterBaseInput>({
-    mode: initialVoterBaseMode as VoterBaseMode,
-    emails: initialAllowedEmails,
-    domains: initialAllowedDomains,
+  const [initialDataTimestamp] = useState(() => Date.now());
+
+  const { data: election } = useQuery({
+    queryKey: ["election", electionId],
+    queryFn: () => getElectionById(electionId),
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
   });
+
+  // Form state is seeded from initialData on mount and stays independent after that
+  const [title, setTitle] = useState(initialData.title);
+  const [description, setDescription] = useState(initialData.description);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const hasStarted = ["open", "closed", "archived"].includes(status);
+  const hasStarted = ["open", "closed", "archived"].includes(election.status);
 
   const handleSave = () => {
     if (hasStarted) return;
@@ -56,13 +44,10 @@ export function EditElectionForm({
         await updateElection(electionId, {
           title: title.trim(),
           description: description.trim(),
-          voterBaseMode: voterBase.mode,
-          allowedVoterEmails: voterBase.emails || [],
-          allowedVoterDomains: voterBase.domains || [],
         });
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: ["election", electionId] });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update");
       }
@@ -105,14 +90,10 @@ export function EditElectionForm({
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Voter Base</h3>
-        <VoterBaseForm
-          voterBase={voterBase}
-          onVoterBaseChange={setVoterBase}
-          disabled={hasStarted}
-        />
-      </div>
+      <p className="text-xs text-[var(--text-muted)]">
+        Voter access settings (public/protected, PIN, privacy) have moved to
+        the Share tab.
+      </p>
 
       {error && (
         <p className="text-sm text-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 rounded-lg">{error}</p>

@@ -1,38 +1,26 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { connectDB } from "@/config";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { removeCandidateSchema } from "@/lib/api/server/validation/candidate-schemas";
 
-/**
- * Soft-deletes a candidate by setting deletedAt.
- * Verifies the caller owns the parent election.
- */
 export async function removeCandidate(candidateId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
+
+  const parsed = removeCandidateSchema.safeParse({ candidateId });
+  if (!parsed.success) throw new Error("Invalid input");
 
   await connectDB();
 
   const candidate = await Candidate.findOne({
-    _id: candidateId,
+    _id: parsed.data.candidateId,
     deletedAt: null,
   });
   if (!candidate) throw new Error("Candidate not found");
 
-  // Verify election ownership
-  const election = await Election.findOne({
-    _id: candidate.election,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
-  }
-  if (["open", "closed", "archived"].includes(election.status)) {
-    throw new Error("Cannot remove candidates once the election has started");
-  }
+  await getOwnedElection(candidate.election.toString(), user.id);
 
   candidate.deletedAt = new Date();
   await candidate.save();

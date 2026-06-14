@@ -1,31 +1,36 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
-import { Button, ConfirmDialog, ElectionStatsBar, ElectionGrid, EmptyState, SearchFilterBar  } from "@/components";
-import { deleteElection, duplicateElection  } from "@/lib/api/server";
+import { Button, ConfirmDialog, ElectionStatsBar, ElectionGrid, EmptyState, SearchFilterBar } from "@/components";
+import { useDeleteElection, useDuplicateElection } from "@/hooks";
+import { getMyElections } from "@/lib/";
 import type { ElectionSummary, ElectionStatus } from "@/types";
 
 interface DashboardClientProps {
-  elections: ElectionSummary[];
+  initialData: ElectionSummary[];
 }
 
-export function DashboardClient({ elections }: DashboardClientProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  // Search & filter state
+export function DashboardClient({ initialData }: DashboardClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ElectionStatus | "all">("all");
-
-  // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [initialDataTimestamp] = useState(() => Date.now());
 
-  // Filter elections
+  const { data: elections = [] } = useQuery({
+    queryKey: ["elections"],
+    queryFn: getMyElections,
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
+  });
+
+  const deleteMutation = useDeleteElection();
+  const duplicateMutation = useDuplicateElection();
+
   const filteredElections = useMemo(() => {
     return elections.filter((e) => {
       const matchesSearch =
@@ -37,7 +42,6 @@ export function DashboardClient({ elections }: DashboardClientProps) {
     });
   }, [elections, searchQuery, statusFilter]);
 
-  // Handlers
   const handleDelete = (id: string) => {
     setDeleteTargetId(id);
     setDeleteDialogOpen(true);
@@ -45,27 +49,22 @@ export function DashboardClient({ elections }: DashboardClientProps) {
 
   const confirmDelete = () => {
     if (!deleteTargetId) return;
-    startTransition(async () => {
-      await deleteElection(deleteTargetId);
-      setDeleteDialogOpen(false);
-      setDeleteTargetId(null);
-      router.refresh();
+    deleteMutation.mutate(deleteTargetId, {
+      onSuccess: () => {
+        setDeleteDialogOpen(false);
+        setDeleteTargetId(null);
+      },
     });
   };
 
   const handleDuplicate = (id: string) => {
-    startTransition(async () => {
-      await duplicateElection(id);
-      router.refresh();
-    });
+    duplicateMutation.mutate(id);
   };
 
   return (
     <div className="space-y-6">
-      {/* Stats bar */}
       <ElectionStatsBar elections={elections} />
 
-      {/* Search, filter, and create button row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex-1">
           <SearchFilterBar
@@ -84,7 +83,6 @@ export function DashboardClient({ elections }: DashboardClientProps) {
         </Button>
       </div>
 
-      {/* Election grid or empty state */}
       {elections.length === 0 ? (
         <EmptyState />
       ) : filteredElections.length === 0 ? (
@@ -92,26 +90,25 @@ export function DashboardClient({ elections }: DashboardClientProps) {
           <p className="text-sm text-[var(--text-secondary)]">
             No elections match your search
           </p>
-          <button
-            type="button"
+          <Button
             onClick={() => {
               setSearchQuery("");
               setStatusFilter("all");
             }}
-            className="mt-2 text-sm text-[var(--primary)] hover:underline"
+            className="mt-2 text-sm hover:underline"
           >
             Clear filters
-          </button>
+          </Button>
         </div>
       ) : (
         <ElectionGrid
           elections={filteredElections}
           onDuplicate={handleDuplicate}
           onDelete={handleDelete}
+          duplicatingId={duplicateMutation.isPending ? duplicateMutation.variables : undefined}
         />
       )}
 
-      {/* Delete confirmation dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -120,7 +117,7 @@ export function DashboardClient({ elections }: DashboardClientProps) {
         confirmLabel="Delete"
         variant="destructive"
         onConfirm={confirmDelete}
-        loading={isPending}
+        loading={deleteMutation.isPending}
       />
     </div>
   );

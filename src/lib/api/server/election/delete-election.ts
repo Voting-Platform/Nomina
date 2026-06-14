@@ -1,29 +1,12 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
 
-/**
- * Soft-deletes an election by setting deletedAt.
- * Only the election creator can delete.
- */
 export async function deleteElection(electionId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
-  await connectDB();
-
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to delete this election");
-  }
+  const election = await getOwnedElection(electionId, user.id);
 
   election.deletedAt = new Date();
   await election.save();

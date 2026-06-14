@@ -1,49 +1,42 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import type { UpdateCandidateInput } from "@/types/election";
-import { serialize } from "@/lib/serialize";
+import { connectDB } from "@/config";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { updateCandidateSchema } from "@/lib/api/server/validation/candidate-schemas";
+import { serialize } from "@/lib";
+import type { UpdateCandidateInput } from "@/types";
 
-/**
- * Updates a candidate's details (name, description, image).
- * Verifies the caller owns the parent election.
- */
 export async function updateCandidate(
   candidateId: string,
   data: UpdateCandidateInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
+
+  const parsed = updateCandidateSchema.safeParse({ candidateId, ...data });
+  if (!parsed.success) throw new Error("Invalid candidate data");
 
   await connectDB();
 
   const candidate = await Candidate.findOne({
-    _id: candidateId,
+    _id: parsed.data.candidateId,
     deletedAt: null,
   });
   if (!candidate) throw new Error("Candidate not found");
 
-  // Verify election ownership
-  const election = await Election.findOne({
-    _id: candidate.election,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
-  }
-  if (["open", "closed", "archived"].includes(election.status)) {
-    throw new Error("Cannot edit candidates once the election has started");
-  }
+  // Ownership check (throws "Election not found" on foreign elections)
+  await getOwnedElection(candidate.election.toString(), user.id);
 
-  if (data.name !== undefined) candidate.name = data.name;
-  if (data.description !== undefined) candidate.description = data.description;
-  if (data.imageUrl !== undefined) {
+  if (parsed.data.name !== undefined) candidate.name = parsed.data.name;
+  if (parsed.data.description !== undefined) {
+    candidate.description = parsed.data.description;
+  }
+  if (parsed.data.imageUrl !== undefined) {
     candidate.imageUrl =
-      data.imageUrl === null || data.imageUrl === "" ? null : data.imageUrl;
+      parsed.data.imageUrl === null || parsed.data.imageUrl === ""
+        ? null
+        : parsed.data.imageUrl;
   }
 
   await candidate.save();

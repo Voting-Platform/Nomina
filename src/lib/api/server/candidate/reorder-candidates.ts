@@ -1,40 +1,26 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { connectDB } from "@/config";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { reorderCandidatesSchema } from "@/lib/api/server/validation/candidate-schemas";
 
-/**
- * Reorders candidates by updating their position field.
- * Accepts an array of candidate IDs in the desired order.
- */
 export async function reorderCandidates(
   electionId: string,
   orderedIds: string[]
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
+
+  const parsed = reorderCandidatesSchema.safeParse({ electionId, orderedIds });
+  if (!parsed.success) throw new Error("Invalid input");
 
   await connectDB();
+  const election = await getOwnedElection(parsed.data.electionId, user.id);
 
-  // Verify election ownership
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
-  }
-  if (["open", "closed", "archived"].includes(election.status)) {
-    throw new Error("Cannot reorder candidates once the election has started");
-  }
-
-  // Batch update positions
-  const bulkOps = orderedIds.map((id, index) => ({
+  const bulkOps = parsed.data.orderedIds.map((id, index) => ({
     updateOne: {
-      filter: { _id: id, election: electionId },
+      filter: { _id: id, election: election._id },
       update: { $set: { position: index } },
     },
   }));

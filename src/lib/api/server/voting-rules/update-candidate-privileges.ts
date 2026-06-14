@@ -1,54 +1,37 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import { serialize } from "@/lib/serialize";
-import type { CandidatePrivilegesInput } from "@/types/election";
+import { connectDB } from "@/config";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { candidatePrivilegesSchema } from "@/lib/api/server/validation/candidate-schemas";
+import { serialize } from "@/lib";
+import type { CandidatePrivilegesInput } from "@/types";
 
-/**
- * Updates per-candidate voting privileges.
- * Sets max receivable votes and eligibility for a specific candidate.
- */
 export async function updateCandidatePrivileges(
   candidateId: string,
   privileges: CandidatePrivilegesInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
+
+  const parsed = candidatePrivilegesSchema.safeParse({
+    candidateId,
+    ...privileges,
+  });
+  if (!parsed.success) throw new Error("Invalid candidate privileges");
 
   await connectDB();
 
   const candidate = await Candidate.findOne({
-    _id: candidateId,
+    _id: parsed.data.candidateId,
     deletedAt: null,
   });
   if (!candidate) throw new Error("Candidate not found");
 
-  // Verify election ownership
-  const election = await Election.findOne({
-    _id: candidate.election,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
-  }
-  if (["open", "closed", "archived"].includes(election.status)) {
-    throw new Error("Cannot modify candidate privileges once the election has started");
-  }
+  await getOwnedElection(candidate.election.toString(), user.id);
 
-  // Validate
-  if (
-    privileges.maxVotesReceivable !== null &&
-    privileges.maxVotesReceivable < 1
-  ) {
-    throw new Error("Max votes receivable must be at least 1 or null (unlimited)");
-  }
-
-  candidate.maxVotesReceivable = privileges.maxVotesReceivable;
-  candidate.isEligibleForVoting = privileges.isEligibleForVoting;
+  candidate.maxVotesReceivable = parsed.data.maxVotesReceivable;
+  candidate.isEligibleForVoting = parsed.data.isEligibleForVoting;
 
   await candidate.save();
 

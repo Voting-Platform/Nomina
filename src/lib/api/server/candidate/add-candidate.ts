@@ -1,40 +1,27 @@
 "use server";
 
 import { connectDB } from "@/config";
-import { Election,Candidate } from "@/models";
-import { getOrSyncDbUser } from "@/lib/api/server";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { addCandidateSchema } from "@/lib/api/server/validation/candidate-schemas";
 import { serialize } from "@/lib";
 import type { CreateCandidateInput } from "@/types";
 
-/**
- * Adds a new candidate to an election.
- * Auto-assigns position at the end of the list.
- */
 export async function addCandidate(
   electionId: string,
   data: CreateCandidateInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
+
+  const parsed = addCandidateSchema.safeParse({ electionId, ...data });
+  if (!parsed.success) throw new Error("Invalid candidate data");
 
   await connectDB();
+  const election = await getOwnedElection(parsed.data.electionId, user.id);
 
-  // Verify election ownership
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
-  }
-  if (["open", "closed", "archived"].includes(election.status)) {
-    throw new Error("Cannot add candidates once the election has started");
-  }
-
-  // Get next position
   const lastCandidate = await Candidate.findOne({
-    election: electionId,
+    election: election._id,
     deletedAt: null,
   })
     .sort({ position: -1 })
@@ -43,10 +30,10 @@ export async function addCandidate(
   const nextPosition = lastCandidate ? lastCandidate.position + 1 : 0;
 
   const candidate = await Candidate.create({
-    election: electionId,
-    name: data.name,
-    description: data.description || "",
-    imageUrl: data.imageUrl || null,
+    election: election._id,
+    name: parsed.data.name,
+    description: parsed.data.description || "",
+    imageUrl: parsed.data.imageUrl || null,
     position: nextPosition,
   });
 

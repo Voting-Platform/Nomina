@@ -1,15 +1,16 @@
 "use client";
 
-import { ElectionCard } from "@/components/molecules/electionCard";
-import type { ElectionSummary } from "@/types/election";
+import { ElectionCard } from "@/components";
+import type { ElectionSummary } from "@/types";
 
 interface ElectionGridProps {
   elections: ElectionSummary[];
   onDuplicate?: (id: string) => void;
   onDelete?: (id: string) => void;
+  duplicatingId?: string;
 }
 
-export function ElectionGrid({ elections, onDuplicate, onDelete }: ElectionGridProps) {
+export function ElectionGrid({ elections, onDuplicate, onDelete, duplicatingId }: ElectionGridProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
       {elections.map((election) => (
@@ -18,6 +19,7 @@ export function ElectionGrid({ elections, onDuplicate, onDelete }: ElectionGridP
           election={election}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
+          duplicatingId={duplicatingId}
         />
       ))}
     </div>

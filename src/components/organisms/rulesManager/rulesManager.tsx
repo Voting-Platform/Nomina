@@ -1,40 +1,37 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { VotingRulesForm } from "@/components/organisms/createElectionWizard/forms/votingRulesForm";
-import { updateVotingRules } from "@/lib/api/server/voting-rules/update-voting-rules";
-import { updateCandidatePrivileges } from "@/lib/api/server/voting-rules/update-candidate-privileges";
-import type { VotingRulesInput } from "@/types/election";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Input, Label, Switch, Separator, VotingRulesForm } from "@/components";
+import { updateVotingRules, updateCandidatePrivileges, getElectionById } from "@/lib/api/server";
+import type { ElectionDetailData, VotingRulesInput } from "@/types";
 import { Save, ShieldCheck, AlertTriangle } from "lucide-react";
-
-interface CandidateData {
-  _id: string;
-  name: string;
-  maxVotesReceivable: number | null;
-  isEligibleForVoting: boolean;
-}
 
 interface RulesManagerProps {
   electionId: string;
-  initialRules: VotingRulesInput;
-  candidates: CandidateData[];
-  status: string;
+  initialData: ElectionDetailData;
 }
 
-export function RulesManager({ electionId, initialRules, candidates, status }: RulesManagerProps) {
-  const router = useRouter();
+export function RulesManager({ electionId, initialData }: RulesManagerProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const [rules, setRules] = useState(initialRules);
+  const [initialDataTimestamp] = useState(() => Date.now());
+
+  const { data: election } = useQuery<ElectionDetailData>({
+    queryKey: ["election", electionId],
+    queryFn: () => getElectionById(electionId) as Promise<ElectionDetailData>,
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
+  });
+
+  const [rules, setRules] = useState<VotingRulesInput>({
+    maxTotalVotesPerVoter: initialData.maxTotalVotesPerVoter,
+    maxVotesPerCandidate: initialData.maxVotesPerCandidate,
+  });
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const hasStarted = ["open", "closed", "archived"].includes(status);
+  const hasStarted = ["open", "closed", "archived"].includes(election.status);
 
   const handleSaveRules = () => {
     if (hasStarted) return;
@@ -56,20 +53,20 @@ export function RulesManager({ electionId, initialRules, candidates, status }: R
       await updateVotingRules(electionId, rules);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
   const handleUpdatePrivileges = (candidateId: string, field: string, value: number | null | boolean) => {
     if (hasStarted) return;
     startTransition(async () => {
-      const candidate = candidates.find((c) => c._id === candidateId);
+      const candidate = election.candidates.find((c) => c._id === candidateId);
       if (!candidate) return;
       await updateCandidatePrivileges(candidateId, {
         maxVotesReceivable: field === "maxVotesReceivable" ? (value as number | null) : candidate.maxVotesReceivable,
         isEligibleForVoting: field === "isEligibleForVoting" ? (value as boolean) : candidate.isEligibleForVoting,
       });
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
@@ -112,7 +109,7 @@ export function RulesManager({ electionId, initialRules, candidates, status }: R
           Per-Candidate Privileges
         </h3>
         <div className="space-y-3">
-          {candidates.map((c) => (
+          {election.candidates.map((c) => (
             <div key={c._id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-[var(--text-primary)]">{c.name}</p>

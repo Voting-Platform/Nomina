@@ -1,34 +1,55 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Users, Vote, MoreHorizontal, Pencil, Share2, BarChart3, Copy, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Calendar,
+  Users,
+  Vote,
+  MoreHorizontal,
+  Pencil,
+  Share2,
+  BarChart3,
+  Copy,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { StatusBadge } from "@/components/atoms/statusBadge";
-import type { ElectionSummary } from "@/types/election";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdownMenu";
+  StatusBadge,
+} from "@/components";
+import type { ElectionSummary } from "@/types";
 
 interface ElectionCardProps {
   election: ElectionSummary;
   onDuplicate?: (id: string) => void;
   onDelete?: (id: string) => void;
+  duplicatingId?: string;
   className?: string;
 }
 
-export function ElectionCard({ election, onDuplicate, onDelete, className }: ElectionCardProps) {
+export function ElectionCard({
+  election,
+  onDuplicate,
+  onDelete,
+  duplicatingId,
+  className,
+}: ElectionCardProps) {
+  const isDuplicating = duplicatingId === election._id;
+  const router = useRouter();
+
   return (
     <div
       className={cn(
         "group relative rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-[var(--primary)]/30",
-        className
-      )}
-    >
+        className,
+      )} onClick={() => router.push(`/elections/${election._id}`)}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -50,6 +71,7 @@ export function ElectionCard({ election, onDuplicate, onDelete, className }: Ele
               type="button"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] transition-all opacity-0 group-hover:opacity-100"
               aria-label="Election actions"
+              onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
@@ -71,8 +93,16 @@ export function ElectionCard({ election, onDuplicate, onDelete, className }: Ele
               </Link>
             </DropdownMenuItem>
             {onDuplicate && (
-              <DropdownMenuItem onClick={() => onDuplicate(election._id)}>
-                <Copy className="h-4 w-4" /> Duplicate
+              <DropdownMenuItem
+                disabled={isDuplicating}
+                onClick={() => onDuplicate(election._id)}
+              >
+                {isDuplicating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {isDuplicating ? "Duplicating…" : "Duplicate"}
               </DropdownMenuItem>
             )}
             {onDelete && (

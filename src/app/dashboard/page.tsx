@@ -1,12 +1,10 @@
-import { getMyElections, getOrSyncDbUser } from "@/lib/api/server";
-import { redirect } from "next/navigation";
+import { getMyElections } from "@/lib/api/server";
 import { DashboardClient } from "@/components";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) redirect("/api/auth/signin");
+
 
   const elections = await getMyElections();
 
@@ -25,7 +23,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <DashboardClient elections={elections} />
+        <DashboardClient initialData={elections} />
       </main>
     </div>
   );

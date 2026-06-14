@@ -1,59 +1,57 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import type { CreateElectionInput } from "@/types/election";
+import { connectDB } from "@/config";
+import { Candidate, Election, VoterToken } from "@/models/";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { createElectionSchema } from "@/lib/api/server/validation/election-schemas";
+import { generateSixDigitCode } from "@/lib/api/server/voting/hash";
+import type { CreateElectionInput } from "@/types";
 
-/**
- * Creates a new election with candidates in a single operation.
- * Generates a unique slug and shareable link.
- */
 export async function createElection(data: CreateElectionInput) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
+
+  const parsed = createElectionSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid election data");
+  const input = parsed.data;
 
   await connectDB();
 
-  // Generate URL-friendly slug from title
-  const baseSlug = data.title
+  const baseSlug = input.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   const uniqueSuffix = Date.now().toString(36);
   const slug = `${baseSlug}-${uniqueSuffix}`;
 
-  // Create the election
+  const access = input.voterAccess;
+  const isPublic = access.accessType === "public";
+
   const election = await Election.create({
-    title: data.title,
-    description: data.description || "",
+    title: input.title,
+    description: input.description || "",
     slug,
-    createdBy: dbUser._id,
+    createdBy: user.id,
     status: "draft",
 
-    // Voting rules
-    maxTotalVotesPerVoter: data.votingRules.maxTotalVotesPerVoter,
-    maxVotesPerCandidate: data.votingRules.maxVotesPerCandidate,
-    allowVoterVisibility: data.votingRules.allowVoterVisibility,
+    maxTotalVotesPerVoter: input.votingRules.maxTotalVotesPerVoter,
+    maxVotesPerCandidate: input.votingRules.maxVotesPerCandidate,
 
-    // Voter base
-    voterBaseMode: data.voterBase.mode,
-    allowedVoterEmails: data.voterBase.emails || [],
-    allowedVoterDomains: data.voterBase.domains || [],
+    accessType: access.accessType,
+    pinEnabled: isPublic && access.pinEnabled,
+    pin: isPublic && access.pinEnabled ? generateSixDigitCode() : null,
+    otpRequired: !isPublic && access.otpRequired,
+    collectVoterDetails: access.collectVoterDetails,
+    revealVoterIdentities: access.revealVoterIdentities,
 
-    // Scheduling
-    schedulingMode: data.scheduling.mode,
-    scheduledStartAt: data.scheduling.scheduledStartAt ? new Date(data.scheduling.scheduledStartAt) : null,
-    scheduledEndAt: data.scheduling.scheduledEndAt ? new Date(data.scheduling.scheduledEndAt) : null,
+    schedulingMode: input.scheduling.mode,
+    scheduledStartAt: input.scheduling.scheduledStartAt || null,
+    scheduledEndAt: input.scheduling.scheduledEndAt || null,
 
-    // Generate election link
     electionLink: `${process.env.APP_BASE_URL}/vote/${slug}`,
   });
 
-  // Create candidates in bulk
-  if (data.candidates.length > 0) {
-    const candidateDocs = data.candidates.map((c, index) => ({
+  if (input.candidates.length > 0) {
+    const candidateDocs = input.candidates.map((c, index) => ({
       election: election._id,
       name: c.name,
       description: c.description || "",
@@ -63,33 +61,53 @@ export async function createElection(data: CreateElectionInput) {
     await Candidate.insertMany(candidateDocs);
   }
 
-  // If scheduling mode is automatic, set status based on timing
-  if (
-    data.scheduling.mode === "automatic" &&
-    data.scheduling.scheduledStartAt &&
-    data.scheduling.scheduledEndAt
-  ) {
-    const startAt = new Date(data.scheduling.scheduledStartAt);
-    const endAt = new Date(data.scheduling.scheduledEndAt);
+  if (access.accessType === "protected" && access.voters.length > 0) {
+    // Schema guarantees ≥1 voter and normalized emails; dedupe within payload
+    const seen = new Set<string>();
+    const voterDocs = access.voters
+      .filter((v) => {
+        if (seen.has(v.email)) return false;
+        seen.add(v.email);
+        return true;
+      })
+      .map((v) => ({
+        election: election._id,
+        email: v.email,
+        name: v.name?.trim() || null,
+      }));
+    await VoterToken.insertMany(voterDocs);
+  }
+
+  if (input.scheduling.mode === "automatic" && input.scheduling.scheduledStartAt) {
+    const startAt = new Date(input.scheduling.scheduledStartAt);
     const now = new Date();
 
     if (startAt.getTime() < now.getTime() - 60 * 1000) {
       throw new Error("Start time cannot be in the past");
     }
 
-    if (startAt >= endAt) {
-      throw new Error("Start time must be before end time");
+    if (input.scheduling.scheduledEndAt) {
+      const endAt = new Date(input.scheduling.scheduledEndAt);
+
+      if (startAt >= endAt) {
+        throw new Error("Start time must be before end time");
+      }
+
+      if (startAt > now) {
+        election.status = "scheduled";
+      } else if (endAt > now) {
+        election.status = "open";
+        election.manuallyOpenedAt = now;
+      } else {
+        election.status = "closed";
+        election.manuallyClosedAt = now;
+      }
+    } else {
+      if (startAt > now) {
+        election.status = "scheduled";
+      }
     }
 
-    if (startAt > now) {
-      election.status = "scheduled";
-    } else if (endAt > now) {
-      election.status = "open";
-      election.manuallyOpenedAt = now;
-    } else {
-      election.status = "closed";
-      election.manuallyClosedAt = now;
-    }
     await election.save();
   }
 

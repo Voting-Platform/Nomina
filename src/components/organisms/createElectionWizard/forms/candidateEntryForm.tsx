@@ -1,11 +1,8 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { CandidateImageField } from "@/components/molecules/candidateImageField";
+import { Button,CandidateImageField, Input, Textarea } from "@/components";
 import { Trash2, GripVertical } from "lucide-react";
-import type { CreateCandidateInput } from "@/types/election";
+import type { CreateCandidateInput } from "@/types";
 
 interface CandidateEntryFormProps {
   candidates: CreateCandidateInput[];
@@ -86,14 +83,13 @@ export function CandidateEntryForm({
             </div>
 
             {/* Remove button */}
-            <button
-              type="button"
+            <Button
               onClick={() => removeCandidate(index)}
               className="mt-2 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--destructive)] hover:bg-[var(--destructive-light)] transition-all duration-200"
               aria-label={`Remove candidate ${index + 1}`}
             >
               <Trash2 className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         ))}
       </div>

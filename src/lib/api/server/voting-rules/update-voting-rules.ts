@@ -1,54 +1,34 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import { serialize } from "@/lib/serialize";
-import type { VotingRulesInput } from "@/types/election";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { votingRulesSchema } from "@/lib/api/server/validation/election-schemas";
+import { serialize } from "@/lib";
+import type { VotingRulesInput } from "@/types";
 
-/**
- * Updates election-level voting rules.
- * Controls max votes per voter, per candidate, and voter visibility.
- */
 export async function updateVotingRules(
   electionId: string,
   rules: VotingRulesInput
 ) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
-  await connectDB();
+  const parsed = votingRulesSchema.safeParse(rules);
+  if (!parsed.success) throw new Error("Invalid voting rules");
 
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-  if (election.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to modify this election");
-  }
-  if (["open", "closed", "archived"].includes(election.status)) {
-    throw new Error("Cannot modify voting rules once the election has started");
-  }
-
-  // Validate rules
-  if (rules.maxTotalVotesPerVoter < 1) {
-    throw new Error("Max total votes per voter must be at least 1");
-  }
-  if (rules.maxVotesPerCandidate < 1) {
-    throw new Error("Max votes per candidate must be at least 1");
-  }
-  if (rules.maxVotesPerCandidate > rules.maxTotalVotesPerVoter) {
+  if (parsed.data.maxVotesPerCandidate > parsed.data.maxTotalVotesPerVoter) {
     throw new Error(
       "Max votes per candidate cannot exceed max total votes per voter"
     );
   }
 
-  election.maxTotalVotesPerVoter = rules.maxTotalVotesPerVoter;
-  election.maxVotesPerCandidate = rules.maxVotesPerCandidate;
-  election.allowVoterVisibility = rules.allowVoterVisibility;
+  const election = await getOwnedElection(electionId, user.id);
+
+  election.maxTotalVotesPerVoter = parsed.data.maxTotalVotesPerVoter;
+  election.maxVotesPerCandidate = parsed.data.maxVotesPerCandidate;
 
   await election.save();
 
-  return serialize(election.toObject());
+  const result = serialize(election.toObject());
+  result._id = election._id.toString();
+  return result;
 }

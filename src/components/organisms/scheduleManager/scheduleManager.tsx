@@ -1,39 +1,41 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/atoms/statusBadge";
 import { SchedulingForm } from "@/components/organisms/createElectionWizard/forms/schedulingForm";
 import { updateScheduling } from "@/lib/api/server/scheduling/update-scheduling";
 import { manuallyOpenElection } from "@/lib/api/server/scheduling/manually-open-election";
 import { manuallyCloseElection } from "@/lib/api/server/scheduling/manually-close-election";
+import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
 import type { SchedulingInput, ElectionStatus, SchedulingMode } from "@/types/election";
+import type { ElectionDetailData } from "@/types";
 import { Save, Play, Square, AlertTriangle } from "lucide-react";
 
 interface ScheduleManagerProps {
   electionId: string;
-  initialStatus: string;
-  initialSchedulingMode: string;
-  initialStartAt: string | null;
-  initialEndAt: string | null;
+  initialData: ElectionDetailData;
 }
 
-export function ScheduleManager({
-  electionId,
-  initialStatus,
-  initialSchedulingMode,
-  initialStartAt,
-  initialEndAt,
-}: ScheduleManagerProps) {
-  const router = useRouter();
+export function ScheduleManager({ electionId, initialData }: ScheduleManagerProps) {
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const status = initialStatus as ElectionStatus;
+  const [initialDataTimestamp] = useState(() => Date.now());
+
+  const { data: election } = useQuery({
+    queryKey: ["election", electionId],
+    queryFn: () => getElectionById(electionId),
+    initialData,
+    initialDataUpdatedAt: initialDataTimestamp,
+  });
+
+  const status = election.status as ElectionStatus;
+
   const [scheduling, setScheduling] = useState<SchedulingInput>({
-    mode: initialSchedulingMode as SchedulingMode,
-    scheduledStartAt: initialStartAt || undefined,
-    scheduledEndAt: initialEndAt || undefined,
+    mode: initialData.schedulingMode as SchedulingMode,
+    scheduledStartAt: initialData.scheduledStartAt || undefined,
+    scheduledEndAt: initialData.scheduledEndAt || undefined,
   });
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,7 +71,7 @@ export function ScheduleManager({
         await updateScheduling(electionId, scheduling);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
-        router.refresh();
+        queryClient.invalidateQueries({ queryKey: ["election", electionId] });
       } catch (err) {
         setErrors({ scheduling: err instanceof Error ? err.message : "Failed to update scheduling" });
       }
@@ -79,14 +81,14 @@ export function ScheduleManager({
   const handleOpen = () => {
     startTransition(async () => {
       await manuallyOpenElection(electionId);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
   const handleClose = () => {
     startTransition(async () => {
       await manuallyCloseElection(electionId);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["election", electionId] });
     });
   };
 
@@ -115,7 +117,7 @@ export function ScheduleManager({
         </div>
 
         {/* Manual controls */}
-        {initialSchedulingMode === "manual" && (
+        {election.schedulingMode === "manual" && (
           <div className="flex gap-2">
             {(status === "draft" || status === "scheduled") && (
               <Button onClick={handleOpen} disabled={isPending} variant="secondary" className="bg-[var(--secondary)] text-white hover:bg-[var(--secondary-hover)]">

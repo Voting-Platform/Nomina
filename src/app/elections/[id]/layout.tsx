@@ -1,7 +1,6 @@
-import { getOrSyncDbUser } from "@/lib/api/server/user";
-import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
-import { redirect, notFound } from "next/navigation";
-import { ElectionDetailNav } from "@/components/organisms/electionDetailNav";
+
+import { getElectionById } from "@/lib/api/server";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -13,17 +12,13 @@ export default async function ElectionDetailLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) redirect("/api/auth/signin");
 
-  const election = await getElectionById(id).catch((err) => {
-    console.error(`[ElectionDetailLayout] getElectionById("${id}") failed:`, err);
+  const election = await getElectionById(id).catch(() => {
     notFound();
   });
 
   return (
     <main className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      {/* Election header */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
           {election.title}
@@ -34,12 +29,7 @@ export default async function ElectionDetailLayout({
           </p>
         )}
       </div>
-
-      {/* Tab navigation */}
-      <ElectionDetailNav electionId={id} />
-
-      {/* Page content */}
-      <div className="mt-6">{children}</div>
+      {children}
     </main>
   );
 }

@@ -1,17 +1,12 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { Candidate } from "@/models/Candidate";
-import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { connectDB } from "@/config";
+import { Candidate, Election } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { generateSixDigitCode } from "@/lib/api/server/voting/hash";
 
-/**
- * Duplicates an election as a new draft.
- * Copies all settings and candidates but not votes.
- */
 export async function duplicateElection(electionId: string) {
-  const dbUser = await getOrSyncDbUser();
-  if (!dbUser) throw new Error("Unauthorized");
+  const user = await requireAuth();
 
   await connectDB();
 
@@ -20,13 +15,10 @@ export async function duplicateElection(electionId: string) {
     deletedAt: null,
   }).lean();
 
-  if (!original) throw new Error("Election not found");
-
-  if (original.createdBy.toString() !== dbUser._id.toString()) {
-    throw new Error("You do not have permission to duplicate this election");
+  if (!original || original.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
-  // Generate new slug
   const baseSlug = original.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -34,24 +26,26 @@ export async function duplicateElection(electionId: string) {
   const uniqueSuffix = Date.now().toString(36);
   const slug = `${baseSlug}-copy-${uniqueSuffix}`;
 
-  // Create duplicate election
   const duplicate = await Election.create({
     title: `${original.title} (Copy)`,
     description: original.description,
     slug,
-    createdBy: dbUser._id,
+    createdBy: user.id,
     status: "draft",
     schedulingMode: original.schedulingMode,
     maxTotalVotesPerVoter: original.maxTotalVotesPerVoter,
     maxVotesPerCandidate: original.maxVotesPerCandidate,
-    allowVoterVisibility: original.allowVoterVisibility,
-    voterBaseMode: original.voterBaseMode,
-    allowedVoterEmails: original.allowedVoterEmails,
-    allowedVoterDomains: original.allowedVoterDomains,
+    accessType: original.accessType,
+    pinEnabled: original.pinEnabled,
+    // The copy gets its own PIN; the voter roster/tokens are NOT copied
+    pin: original.pinEnabled ? generateSixDigitCode() : null,
+    otpRequired: original.otpRequired,
+    collectVoterDetails: original.collectVoterDetails,
+    revealVoterIdentities: original.revealVoterIdentities,
+    emailTemplate: original.emailTemplate,
     electionLink: `${process.env.APP_BASE_URL}/vote/${slug}`,
   });
 
-  // Copy candidates
   const originalCandidates = await Candidate.find({
     election: electionId,
     deletedAt: null,
