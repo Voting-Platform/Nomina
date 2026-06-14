@@ -28,10 +28,13 @@ export const dynamic = "force-dynamic";
 
 export default async function ElectionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab } = await searchParams;
   const election = await getElectionById(id).catch(() => notFound());
 
   const accessLabel =
@@ -45,8 +48,11 @@ export default async function ElectionDetailPage({
   const AccessIcon: LucideIcon =
     election.accessType === "public" ? Globe : ShieldCheck;
 
+  const validTabs = ["overview", "edit", "candidates", "rules", "schedule", "share", "results"];
+  const activeTab = tab && validTabs.includes(tab) ? tab : "overview";
+
   return (
-    <Tabs defaultValue="overview">
+    <Tabs defaultValue={activeTab}>
       <TabsList className="mb-6 flex-wrap h-auto gap-1" variant="line">
         <TabsTrigger value="overview" className="gap-1.5">
           <LayoutDashboard className="h-4 w-4" />

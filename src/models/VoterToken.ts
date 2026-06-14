@@ -43,8 +43,15 @@ const VoterTokenSchema = new Schema(
 // One token per email per election
 VoterTokenSchema.index({ election: 1, email: 1 }, { unique: true });
 
-// Token lookup at vote time
-VoterTokenSchema.index({ tokenHash: 1 }, { unique: true, sparse: true });
+// Token lookup at vote time — partial index so null tokenHash docs are never indexed
+// (sparse alone still indexes explicit null values in MongoDB, causing dup key errors)
+VoterTokenSchema.index(
+  { tokenHash: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { tokenHash: { $type: "string" } },
+  }
+);
 
 // Roster filtering by invitation status
 VoterTokenSchema.index({ election: 1, invitationStatus: 1 });
