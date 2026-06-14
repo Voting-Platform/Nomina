@@ -13,10 +13,26 @@ const VoteSchema = new Schema(
       ref: "Candidate",
       required: true,
     },
+
+    // ─── Voter Identity ───
+    // Exactly one identity source per vote; voterKey is always present.
     voter: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null, // legacy votes only
+    },
+    voterToken: {
+      type: Schema.Types.ObjectId,
+      ref: "VoterToken",
+      default: null, // protected elections
+    },
+    // "user:<userId>" | "token:<voterTokenId>" | "anon:<uuid>"
+    voterKey: { type: String, required: true },
+
+    // Collected when election.collectVoterDetails is enabled
+    voterDetails: {
+      name: { type: String, default: null },
+      email: { type: String, default: null },
     },
 
     // ─── Audit ───
@@ -26,16 +42,15 @@ const VoteSchema = new Schema(
 );
 
 // ─── Indexes ───
-// Enforce vote limits: quickly count votes per voter in an election
-VoteSchema.index({ election: 1, voter: 1 });
-
 // Tally votes per candidate
 VoteSchema.index({ election: 1, candidate: 1 });
 
-// Prevent exact duplicate votes (same voter → same candidate in same election)
-VoteSchema.index(
-  { election: 1, voter: 1, candidate: 1 },
-  { unique: true }
-);
+// Per-voter counting, duplicate checks, unique-voter aggregation.
+// Intentionally NOT unique: one voter may cast multiple votes for the same
+// candidate when maxVotesPerCandidate > 1 (one Vote document per vote).
+// Single-submission is enforced at the application layer (atomic token
+// claim for protected elections; signed cookie + existing-vote check for
+// public elections).
+VoteSchema.index({ election: 1, voterKey: 1 });
 
 export const Vote = models.Vote || model("Vote", VoteSchema);

@@ -3,6 +3,7 @@
 import { connectDB } from "@/config";
 import { Candidate, Election } from "@/models";
 import { requireAuth } from "@/lib/api/server/require-auth";
+import { generateSixDigitCode } from "@/lib/api/server/voting/hash";
 
 export async function duplicateElection(electionId: string) {
   const user = await requireAuth();
@@ -14,10 +15,8 @@ export async function duplicateElection(electionId: string) {
     deletedAt: null,
   }).lean();
 
-  if (!original) throw new Error("Election not found");
-
-  if (original.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
+  if (!original || original.createdBy.toString() !== user.id) {
+    throw new Error("Election not found");
   }
 
   const baseSlug = original.title
@@ -36,10 +35,14 @@ export async function duplicateElection(electionId: string) {
     schedulingMode: original.schedulingMode,
     maxTotalVotesPerVoter: original.maxTotalVotesPerVoter,
     maxVotesPerCandidate: original.maxVotesPerCandidate,
-    allowVoterVisibility: original.allowVoterVisibility,
-    voterBaseMode: original.voterBaseMode,
-    allowedVoterEmails: original.allowedVoterEmails,
-    allowedVoterDomains: original.allowedVoterDomains,
+    accessType: original.accessType,
+    pinEnabled: original.pinEnabled,
+    // The copy gets its own PIN; the voter roster/tokens are NOT copied
+    pin: original.pinEnabled ? generateSixDigitCode() : null,
+    otpRequired: original.otpRequired,
+    collectVoterDetails: original.collectVoterDetails,
+    revealVoterIdentities: original.revealVoterIdentities,
+    emailTemplate: original.emailTemplate,
     electionLink: `${process.env.APP_BASE_URL}/vote/${slug}`,
   });
 

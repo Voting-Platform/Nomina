@@ -1,2 +1,4 @@
 export { generateElectionLink } from './generate-election-link';
-export { sendElectionLinkEmail } from './send-election-link-email';
+export { sendInvitations } from './send-invitations';
+export { updateEmailTemplate } from './update-email-template';
+export { previewInvitationEmail } from './preview-invitation-email';

@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { exportElectionCsv } from "@/lib/api/server/election/export-election-csv";
-import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
-import { Download, Trophy, Medal } from "lucide-react";
+import { Button, Progress } from "@/components";
+import {
+  exportElectionCsv,
+  getElectionById,
+  getVoterLog,
+} from "@/lib/api/server";
+import { Download, Trophy, Medal, Users, EyeOff } from "lucide-react";
 import type { ElectionDetailData } from "@/types";
 
 interface ResultsViewProps {
@@ -23,6 +25,12 @@ export function ResultsView({ electionId, initialData }: ResultsViewProps) {
     queryFn: () => getElectionById(electionId),
     initialData,
     initialDataUpdatedAt: initialDataTimestamp,
+  });
+
+  const { data: voterLog } = useQuery({
+    queryKey: ["voter-log", electionId],
+    queryFn: () => getVoterLog(electionId),
+    enabled: election.revealVoterIdentities,
   });
 
   const sorted = [...election.candidates].sort((a, b) => b.voteCount - a.voteCount);
@@ -110,6 +118,70 @@ export function ResultsView({ electionId, initialData }: ResultsViewProps) {
             );
           })}
         </div>
+      )}
+
+      {/* Voter log — owner-only, gated by revealVoterIdentities */}
+      {election.revealVoterIdentities ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1 flex items-center gap-2">
+            <Users className="h-4 w-4 text-[var(--primary)]" />
+            Voter Log
+          </h3>
+          <p className="text-xs text-[var(--text-muted)] mb-4">
+            Only you (the organizer) can see this list.
+          </p>
+
+          {!voterLog ? (
+            <p className="text-sm text-[var(--text-muted)] py-4 text-center">
+              Loading voter log...
+            </p>
+          ) : voterLog.rows.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] py-4 text-center">
+              No votes recorded yet
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--border)] text-left">
+                    <th className="py-2 pr-4 text-xs font-medium text-[var(--text-muted)]">Voter</th>
+                    <th className="py-2 pr-4 text-xs font-medium text-[var(--text-muted)]">Email</th>
+                    <th className="py-2 pr-4 text-xs font-medium text-[var(--text-muted)]">Voted for</th>
+                    <th className="py-2 pr-4 text-xs font-medium text-[var(--text-muted)] text-right">Votes</th>
+                    <th className="py-2 text-xs font-medium text-[var(--text-muted)]">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {voterLog.rows.map((row, i) => (
+                    <tr key={i} className="border-b border-[var(--border)]/50 last:border-0">
+                      <td className="py-2 pr-4 font-medium text-[var(--text-primary)]">
+                        {row.voterName}
+                      </td>
+                      <td className="py-2 pr-4 text-[var(--text-secondary)]">
+                        {row.voterEmail || "—"}
+                      </td>
+                      <td className="py-2 pr-4 text-[var(--text-primary)]">
+                        {row.candidateName}
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums text-[var(--text-primary)]">
+                        {row.votes}
+                      </td>
+                      <td className="py-2 text-xs text-[var(--text-muted)]">
+                        {new Date(row.castedAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5">
+          <EyeOff className="h-3.5 w-3.5" />
+          Votes are anonymous for this election. Enable &quot;Reveal voter
+          identities&quot; in the Share tab to see who voted.
+        </p>
       )}
     </div>
   );

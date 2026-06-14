@@ -7,9 +7,18 @@
 
 export type ElectionStatus = "draft" | "scheduled" | "open" | "closed" | "archived";
 export type SchedulingMode = "manual" | "automatic";
-export type VoterBaseMode = "anyone_with_link" | "restricted_emails" | "restricted_domain";
+export type AccessType = "public" | "protected";
+export type EmailTemplatePreset = "formal" | "casual" | "minimal";
+export type InvitationStatus = "pending" | "sent" | "failed";
 
 // ─── Document Types (what comes back from MongoDB) ───
+
+export interface EmailTemplateSettings {
+  preset: EmailTemplatePreset;
+  /** Empty string = use the preset's default subject. */
+  subject: string;
+  message: string;
+}
 
 export interface ElectionDocument {
   _id: string;
@@ -25,10 +34,13 @@ export interface ElectionDocument {
   manuallyClosedAt: string | null;
   maxTotalVotesPerVoter: number;
   maxVotesPerCandidate: number;
-  allowVoterVisibility: boolean;
-  voterBaseMode: VoterBaseMode;
-  allowedVoterEmails: string[];
-  allowedVoterDomains: string[];
+  accessType: AccessType;
+  pinEnabled: boolean;
+  pin: string | null;
+  otpRequired: boolean;
+  collectVoterDetails: boolean;
+  revealVoterIdentities: boolean;
+  emailTemplate: EmailTemplateSettings;
   electionLink: string;
   deletedAt: string | null;
   createdAt: string;
@@ -53,10 +65,26 @@ export interface VoteDocument {
   _id: string;
   election: string;
   candidate: string;
-  voter: string;
+  voter: string | null;
+  voterToken: string | null;
+  voterKey: string;
+  voterDetails: { name: string | null; email: string | null };
   castedAt: Date;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface VoterTokenDocument {
+  _id: string;
+  election: string;
+  email: string;
+  name: string | null;
+  votesUsed: number;
+  exhaustedAt: string | null;
+  invitationStatus: InvitationStatus;
+  invitationSentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── Populated / Enriched Types (for UI display) ───
@@ -85,23 +113,90 @@ export interface ElectionSummary {
   createdAt: string;
 }
 
+// ─── Voter-Facing Types (sanitized — never include pin/createdBy/emails) ───
+
+export interface PublicCandidateData {
+  _id: string;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  position: number;
+  isEligibleForVoting: boolean;
+  /** True when the candidate reached maxVotesReceivable. */
+  isFull: boolean;
+}
+
+export interface PublicElectionData {
+  _id: string;
+  title: string;
+  description: string;
+  slug: string;
+  status: ElectionStatus;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  maxTotalVotesPerVoter: number;
+  maxVotesPerCandidate: number;
+  accessType: AccessType;
+  pinEnabled: boolean;
+  otpRequired: boolean;
+  collectVoterDetails: boolean;
+  candidates: PublicCandidateData[];
+}
+
+/** The step the voter must complete next, decided server-side. */
+export type VoteAccessStep =
+  | "pin"
+  | "otp"
+  | "details"
+  | "ballot"
+  | "voted"
+  | "invalid_token"
+  | "missing_token";
+
+export interface BallotSelection {
+  candidateId: string;
+  count: number;
+}
+
+// ─── Voter Log (owner-only, revealVoterIdentities) ───
+
+export interface VoterLogRow {
+  voterName: string;
+  voterEmail: string;
+  candidateName: string;
+  votes: number;
+  castedAt: string;
+}
+
 // ─── Form Input Types (what UI sends to server actions) ───
+
+export interface VoterEntry {
+  email: string;
+  name?: string;
+}
+
+export interface VoterAccessInput {
+  accessType: AccessType;
+  pinEnabled: boolean;
+  otpRequired: boolean;
+  collectVoterDetails: boolean;
+  revealVoterIdentities: boolean;
+  /** Protected elections only: the initial voter roster. */
+  voters: VoterEntry[];
+}
 
 export interface CreateElectionInput {
   title: string;
   description?: string;
   candidates: CreateCandidateInput[];
   votingRules: VotingRulesInput;
-  voterBase: VoterBaseInput;
+  voterAccess: VoterAccessInput;
   scheduling: SchedulingInput;
 }
 
 export interface UpdateElectionInput {
   title?: string;
   description?: string;
-  voterBaseMode?: VoterBaseMode;
-  allowedVoterEmails?: string[];
-  allowedVoterDomains?: string[];
 }
 
 export interface CreateCandidateInput {
@@ -120,7 +215,6 @@ export interface UpdateCandidateInput {
 export interface VotingRulesInput {
   maxTotalVotesPerVoter: number;
   maxVotesPerCandidate: number;
-  allowVoterVisibility: boolean;
 }
 
 export interface CandidatePrivilegesInput {
@@ -128,10 +222,12 @@ export interface CandidatePrivilegesInput {
   isEligibleForVoting: boolean;
 }
 
-export interface VoterBaseInput {
-  mode: VoterBaseMode;
-  emails?: string[];
-  domains?: string[];
+export interface UpdateAccessSettingsInput {
+  accessType?: AccessType;
+  pinEnabled?: boolean;
+  otpRequired?: boolean;
+  collectVoterDetails?: boolean;
+  revealVoterIdentities?: boolean;
 }
 
 export interface SchedulingInput {

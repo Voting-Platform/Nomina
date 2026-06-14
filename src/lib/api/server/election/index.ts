@@ -5,3 +5,4 @@ export { updateElection } from "./update-election";
 export { deleteElection } from "./delete-election";
 export { duplicateElection } from "./duplicate-election";
 export { exportElectionCsv } from "./export-election-csv";
+export { getVoterLog } from "./get-voter-log";

@@ -21,18 +21,10 @@ import {
   Eye,
   Calendar,
   Globe,
-  Mail,
-  AtSign,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-
-const VOTER_ICON_MAP: Record<string, LucideIcon> = {
-  anyone_with_link: Globe,
-  restricted_emails: Mail,
-  restricted_domain: AtSign,
-};
 
 export default async function ElectionDetailPage({
   params,
@@ -42,12 +34,16 @@ export default async function ElectionDetailPage({
   const { id } = await params;
   const election = await getElectionById(id).catch(() => notFound());
 
-  const voterModeLabel: Record<string, string> = {
-    anyone_with_link: "Anyone with link",
-    restricted_emails: `${election.allowedVoterEmails?.length || 0} emails`,
-    restricted_domain: `@${election.allowedVoterDomains?.[0] || "domain"}`,
-  };
-  const VoterIcon: LucideIcon = VOTER_ICON_MAP[election.voterBaseMode] || Globe;
+  const accessLabel =
+    election.accessType === "public"
+      ? election.pinEnabled
+        ? "Public · PIN protected"
+        : "Public — anyone with link"
+      : election.otpRequired
+        ? "Protected · OTP verification"
+        : "Protected — invited voters only";
+  const AccessIcon: LucideIcon =
+    election.accessType === "public" ? Globe : ShieldCheck;
 
   return (
     <Tabs defaultValue="overview">
@@ -124,26 +120,31 @@ export default async function ElectionDetailPage({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Voter visibility</span>
+                  <span className="text-[var(--text-secondary)]">Voter identities</span>
                   <Badge
-                    variant={election.allowVoterVisibility ? "warning" : "outline"}
+                    variant={election.revealVoterIdentities ? "warning" : "outline"}
                     className="text-xs"
                   >
-                    {election.allowVoterVisibility ? "Visible" : "Hidden"}
+                    {election.revealVoterIdentities ? "Revealed to you" : "Anonymous"}
                   </Badge>
                 </div>
               </div>
             </div>
 
             <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Voter Base</h3>
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-light)]">
-                  <VoterIcon className="h-4 w-4 text-[var(--primary)]" />
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Voter Access</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--primary-light)]">
+                    <AccessIcon className="h-4 w-4 text-[var(--primary)]" />
+                  </div>
+                  <span className="text-sm text-[var(--text-primary)]">{accessLabel}</span>
                 </div>
-                <span className="text-sm text-[var(--text-primary)]">
-                  {voterModeLabel[election.voterBaseMode] || "Unknown"}
-                </span>
+                {election.collectVoterDetails && (
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Voters provide name &amp; email before voting
+                  </p>
+                )}
               </div>
             </div>
 
@@ -209,11 +210,7 @@ export default async function ElectionDetailPage({
       </TabsContent>
 
       <TabsContent value="share">
-        <ShareManager
-          electionId={id}
-          electionLink={election.electionLink || ""}
-          slug={election.slug}
-        />
+        <ShareManager electionId={id} election={election} />
       </TabsContent>
 
       <TabsContent value="results">

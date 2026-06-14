@@ -54,7 +54,7 @@ export async function getElectionById(electionId: string) {
 
   const uniqueVoterResult = await Vote.aggregate([
     { $match: { election: election._id } },
-    { $group: { _id: "$voter" } },
+    { $group: { _id: "$voterKey" } },
     { $count: "count" },
   ]);
 

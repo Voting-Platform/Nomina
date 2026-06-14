@@ -1,8 +1,11 @@
 "use server";
 
 import { connectDB } from "@/config";
-import { Candidate, Election } from "@/models";
+import { Candidate } from "@/models";
 import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { candidatePrivilegesSchema } from "@/lib/api/server/validation/candidate-schemas";
+import { serialize } from "@/lib";
 import type { CandidatePrivilegesInput } from "@/types";
 
 export async function updateCandidatePrivileges(
@@ -11,38 +14,26 @@ export async function updateCandidatePrivileges(
 ) {
   const user = await requireAuth();
 
+  const parsed = candidatePrivilegesSchema.safeParse({
+    candidateId,
+    ...privileges,
+  });
+  if (!parsed.success) throw new Error("Invalid candidate privileges");
+
   await connectDB();
 
   const candidate = await Candidate.findOne({
-    _id: candidateId,
+    _id: parsed.data.candidateId,
     deletedAt: null,
   });
   if (!candidate) throw new Error("Candidate not found");
 
-  const election = await Election.findOne({
-    _id: candidate.election,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
+  await getOwnedElection(candidate.election.toString(), user.id);
 
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
-  }
-
-  if (
-    privileges.maxVotesReceivable !== null &&
-    privileges.maxVotesReceivable < 1
-  ) {
-    throw new Error("Max votes receivable must be at least 1 or null (unlimited)");
-  }
-
-  candidate.maxVotesReceivable = privileges.maxVotesReceivable;
-  candidate.isEligibleForVoting = privileges.isEligibleForVoting;
+  candidate.maxVotesReceivable = parsed.data.maxVotesReceivable;
+  candidate.isEligibleForVoting = parsed.data.isEligibleForVoting;
 
   await candidate.save();
 
-  const result = candidate.toObject();
-  result._id = result._id.toString();
-  result.election = result.election.toString();
-  return result;
+  return serialize(candidate.toObject());
 }

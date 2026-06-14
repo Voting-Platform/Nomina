@@ -2,14 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { updateElection } from "@/lib/api/server/election/update-election";
-import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
-import { VoterBaseForm } from "@/components/organisms/createElectionWizard/forms/voterBaseForm";
-import type { VoterBaseMode, VoterBaseInput } from "@/types/election";
+import { Input, Textarea, Label, Button } from "@/components";
+import { updateElection, getElectionById } from "@/lib/api/server";
 import type { ElectionDetailData } from "@/types";
 import { Save } from "lucide-react";
 
@@ -33,11 +27,6 @@ export function EditElectionForm({ electionId, initialData }: EditElectionFormPr
   // Form state is seeded from initialData on mount and stays independent after that
   const [title, setTitle] = useState(initialData.title);
   const [description, setDescription] = useState(initialData.description);
-  const [voterBase, setVoterBase] = useState<VoterBaseInput>({
-    mode: initialData.voterBaseMode as VoterBaseMode,
-    emails: initialData.allowedVoterEmails,
-    domains: initialData.allowedVoterDomains,
-  });
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -52,9 +41,6 @@ export function EditElectionForm({ electionId, initialData }: EditElectionFormPr
         await updateElection(electionId, {
           title: title.trim(),
           description: description.trim(),
-          voterBaseMode: voterBase.mode,
-          allowedVoterEmails: voterBase.emails || [],
-          allowedVoterDomains: voterBase.domains || [],
         });
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -78,10 +64,10 @@ export function EditElectionForm({ electionId, initialData }: EditElectionFormPr
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Voter Base</h3>
-        <VoterBaseForm voterBase={voterBase} onVoterBaseChange={setVoterBase} />
-      </div>
+      <p className="text-xs text-[var(--text-muted)]">
+        Voter access settings (public/protected, PIN, privacy) have moved to
+        the Share tab.
+      </p>
 
       {error && (
         <p className="text-sm text-[var(--destructive)] bg-[var(--destructive-light)] px-4 py-3 rounded-lg">{error}</p>

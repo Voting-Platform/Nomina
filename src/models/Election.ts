@@ -35,16 +35,34 @@ const ElectionSchema = new Schema(
     // ─── Voting Rules (NVP-33) ───
     maxTotalVotesPerVoter: { type: Number, default: 1 },
     maxVotesPerCandidate: { type: Number, default: 1 },
-    allowVoterVisibility: { type: Boolean, default: false },
 
-    // ─── Voter Base ───
-    voterBaseMode: {
+    // ─── Voter Access ───
+    accessType: {
       type: String,
-      enum: ["anyone_with_link", "restricted_emails", "restricted_domain"],
-      default: "anyone_with_link",
+      enum: ["public", "protected"],
+      default: "public",
     },
-    allowedVoterEmails: [{ type: String }],
-    allowedVoterDomains: [{ type: String }],
+    // Public + PIN: plaintext by design — the owner must be able to display
+    // and share it; brute-force defense is server-side rate limiting.
+    pinEnabled: { type: Boolean, default: false },
+    pin: { type: String, default: null },
+    // Protected + OTP
+    otpRequired: { type: Boolean, default: false },
+
+    // ─── Voter Privacy (independent of access type) ───
+    collectVoterDetails: { type: Boolean, default: false },
+    revealVoterIdentities: { type: Boolean, default: false },
+
+    // ─── Invitation Email Template ───
+    emailTemplate: {
+      preset: {
+        type: String,
+        enum: ["formal", "casual", "minimal"],
+        default: "formal",
+      },
+      subject: { type: String, default: "" }, // "" = use preset default
+      message: { type: String, default: "" },
+    },
 
     // ─── Sharing ───
     electionLink: { type: String },

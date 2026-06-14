@@ -1,8 +1,9 @@
 "use server";
 
-import { connectDB } from "@/config";
-import { Election } from "@/models";
 import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { votingRulesSchema } from "@/lib/api/server/validation/election-schemas";
+import { serialize } from "@/lib";
 import type { VotingRulesInput } from "@/types";
 
 export async function updateVotingRules(
@@ -11,37 +12,23 @@ export async function updateVotingRules(
 ) {
   const user = await requireAuth();
 
-  await connectDB();
+  const parsed = votingRulesSchema.safeParse(rules);
+  if (!parsed.success) throw new Error("Invalid voting rules");
 
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
-  }
-
-  if (rules.maxTotalVotesPerVoter < 1) {
-    throw new Error("Max total votes per voter must be at least 1");
-  }
-  if (rules.maxVotesPerCandidate < 1) {
-    throw new Error("Max votes per candidate must be at least 1");
-  }
-  if (rules.maxVotesPerCandidate > rules.maxTotalVotesPerVoter) {
+  if (parsed.data.maxVotesPerCandidate > parsed.data.maxTotalVotesPerVoter) {
     throw new Error(
       "Max votes per candidate cannot exceed max total votes per voter"
     );
   }
 
-  election.maxTotalVotesPerVoter = rules.maxTotalVotesPerVoter;
-  election.maxVotesPerCandidate = rules.maxVotesPerCandidate;
-  election.allowVoterVisibility = rules.allowVoterVisibility;
+  const election = await getOwnedElection(electionId, user.id);
+
+  election.maxTotalVotesPerVoter = parsed.data.maxTotalVotesPerVoter;
+  election.maxVotesPerCandidate = parsed.data.maxVotesPerCandidate;
 
   await election.save();
 
-  const result = election.toObject();
-  result._id = result._id.toString();
+  const result = serialize(election.toObject());
+  result._id = election._id.toString();
   return result;
 }

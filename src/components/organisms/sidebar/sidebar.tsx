@@ -68,7 +68,8 @@ export function Sidebar({ user, children }: SidebarProps) {
 
   const sidebarW = collapsed ? SIDEBAR_CLOSED : SIDEBAR_OPEN;
 
-  if (!user) {
+  // Voter-facing pages get their own minimal chrome — never the app sidebar.
+  if (!user || pathname.startsWith("/vote")) {
     return (
       <main className="min-h-screen bg-[var(--background)]">{children}</main>
     );

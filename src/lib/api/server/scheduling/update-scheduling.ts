@@ -1,8 +1,8 @@
 "use server";
 
-import { connectDB } from "@/config";
-import { Election } from "@/models";
 import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { schedulingSchema } from "@/lib/api/server/validation/election-schemas";
 import type { SchedulingInput } from "@/types";
 
 export async function updateScheduling(
@@ -11,17 +11,10 @@ export async function updateScheduling(
 ) {
   const user = await requireAuth();
 
-  await connectDB();
+  const parsed = schedulingSchema.safeParse(config);
+  if (!parsed.success) throw new Error("Invalid scheduling configuration");
 
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election) throw new Error("Election not found");
-
-  if (election.createdBy.toString() !== user.id) {
-    throw new Error("Forbidden");
-  }
+  const election = await getOwnedElection(electionId, user.id);
 
   if (!["draft", "scheduled"].includes(election.status)) {
     throw new Error("Cannot change scheduling for an active or closed election");

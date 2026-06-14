@@ -27,7 +27,6 @@ export function RulesManager({ electionId, initialData }: RulesManagerProps) {
   const [rules, setRules] = useState<VotingRulesInput>({
     maxTotalVotesPerVoter: initialData.maxTotalVotesPerVoter,
     maxVotesPerCandidate: initialData.maxVotesPerCandidate,
-    allowVoterVisibility: initialData.allowVoterVisibility,
   });
   const [saved, setSaved] = useState(false);
 
