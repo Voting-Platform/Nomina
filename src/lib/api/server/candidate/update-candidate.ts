@@ -1,9 +1,10 @@
 "use server";
 
 import { connectDB } from "@/config";
-import { Candidate, Election } from "@/models";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
-import { UpdateCandidateSchema } from "@/lib/api/server/schemas";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { updateCandidateSchema } from "@/lib/api/server/validation/candidate-schemas";
 import { serialize } from "@/lib";
 import type { UpdateCandidateInput } from "@/types";
 
@@ -12,30 +13,30 @@ export async function updateCandidate(
   data: UpdateCandidateInput
 ) {
   const user = await requireAuth();
-  assertObjectId(candidateId, "Candidate");
-  UpdateCandidateSchema.parse(data);
+
+  const parsed = updateCandidateSchema.safeParse({ candidateId, ...data });
+  if (!parsed.success) throw new Error("Invalid candidate data");
 
   await connectDB();
 
   const candidate = await Candidate.findOne({
-    _id: candidateId,
+    _id: parsed.data.candidateId,
     deletedAt: null,
   });
   if (!candidate) throw new Error("Candidate not found");
 
-  const election = await Election.findOne({
-    _id: candidate.election,
-    deletedAt: null,
-  });
-  if (!election || election.createdBy.toString() !== user.id) {
-    throw new Error("Election not found");
-  }
+  // Ownership check (throws "Election not found" on foreign elections)
+  await getOwnedElection(candidate.election.toString(), user.id);
 
-  if (data.name !== undefined) candidate.name = data.name;
-  if (data.description !== undefined) candidate.description = data.description;
-  if (data.imageUrl !== undefined) {
+  if (parsed.data.name !== undefined) candidate.name = parsed.data.name;
+  if (parsed.data.description !== undefined) {
+    candidate.description = parsed.data.description;
+  }
+  if (parsed.data.imageUrl !== undefined) {
     candidate.imageUrl =
-      data.imageUrl === null || data.imageUrl === "" ? null : data.imageUrl;
+      parsed.data.imageUrl === null || parsed.data.imageUrl === ""
+        ? null
+        : parsed.data.imageUrl;
   }
 
   await candidate.save();

@@ -1,9 +1,8 @@
 "use server";
 
-import { connectDB } from "@/config";
-import { Election } from "@/models";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
-import { UpdateElectionSchema } from "@/lib/api/server/schemas";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { updateElectionSchema } from "@/lib/api/server/validation/election-schemas";
 import type { UpdateElectionInput } from "@/types";
 
 export async function updateElection(
@@ -11,31 +10,19 @@ export async function updateElection(
   data: UpdateElectionInput
 ) {
   const user = await requireAuth();
-  assertObjectId(electionId, "Election");
-  UpdateElectionSchema.parse(data);
 
-  await connectDB();
+  const parsed = updateElectionSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid election data");
 
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
+  const election = await getOwnedElection(electionId, user.id);
 
-  if (!election || election.createdBy.toString() !== user.id) {
-    throw new Error("Election not found");
+  if (parsed.data.title !== undefined) election.title = parsed.data.title;
+  if (parsed.data.description !== undefined) {
+    election.description = parsed.data.description;
   }
 
-  if (data.title !== undefined) election.title = data.title;
-  if (data.description !== undefined) election.description = data.description;
-  if (data.voterBaseMode !== undefined)
-    election.voterBaseMode = data.voterBaseMode;
-  if (data.allowedVoterEmails !== undefined)
-    election.allowedVoterEmails = data.allowedVoterEmails;
-  if (data.allowedVoterDomains !== undefined)
-    election.allowedVoterDomains = data.allowedVoterDomains;
-
-  if (data.title !== undefined) {
-    const baseSlug = data.title
+  if (parsed.data.title !== undefined) {
+    const baseSlug = parsed.data.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");

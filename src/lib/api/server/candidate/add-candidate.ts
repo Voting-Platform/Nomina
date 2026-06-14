@@ -1,9 +1,10 @@
 "use server";
 
 import { connectDB } from "@/config";
-import { Election, Candidate } from "@/models";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
-import { CreateCandidateSchema } from "@/lib/api/server/schemas";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { addCandidateSchema } from "@/lib/api/server/validation/candidate-schemas";
 import { serialize } from "@/lib";
 import type { CreateCandidateInput } from "@/types";
 
@@ -12,21 +13,15 @@ export async function addCandidate(
   data: CreateCandidateInput
 ) {
   const user = await requireAuth();
-  assertObjectId(electionId, "Election");
-  CreateCandidateSchema.parse(data);
+
+  const parsed = addCandidateSchema.safeParse({ electionId, ...data });
+  if (!parsed.success) throw new Error("Invalid candidate data");
 
   await connectDB();
-
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election || election.createdBy.toString() !== user.id) {
-    throw new Error("Election not found");
-  }
+  const election = await getOwnedElection(parsed.data.electionId, user.id);
 
   const lastCandidate = await Candidate.findOne({
-    election: electionId,
+    election: election._id,
     deletedAt: null,
   })
     .sort({ position: -1 })
@@ -35,10 +30,10 @@ export async function addCandidate(
   const nextPosition = lastCandidate ? lastCandidate.position + 1 : 0;
 
   const candidate = await Candidate.create({
-    election: electionId,
-    name: data.name,
-    description: data.description || "",
-    imageUrl: data.imageUrl || null,
+    election: election._id,
+    name: parsed.data.name,
+    description: parsed.data.description || "",
+    imageUrl: parsed.data.imageUrl || null,
     position: nextPosition,
   });
 

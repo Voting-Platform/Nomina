@@ -2,11 +2,11 @@
 
 import { connectDB } from "@/config";
 import { Candidate, Election } from "@/models";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { generateSixDigitCode } from "@/lib/api/server/voting/hash";
 
 export async function duplicateElection(electionId: string) {
   const user = await requireAuth();
-  assertObjectId(electionId, "Election");
 
   await connectDB();
 
@@ -35,10 +35,14 @@ export async function duplicateElection(electionId: string) {
     schedulingMode: original.schedulingMode,
     maxTotalVotesPerVoter: original.maxTotalVotesPerVoter,
     maxVotesPerCandidate: original.maxVotesPerCandidate,
-    allowVoterVisibility: original.allowVoterVisibility,
-    voterBaseMode: original.voterBaseMode,
-    allowedVoterEmails: original.allowedVoterEmails,
-    allowedVoterDomains: original.allowedVoterDomains,
+    accessType: original.accessType,
+    pinEnabled: original.pinEnabled,
+    // The copy gets its own PIN; the voter roster/tokens are NOT copied
+    pin: original.pinEnabled ? generateSixDigitCode() : null,
+    otpRequired: original.otpRequired,
+    collectVoterDetails: original.collectVoterDetails,
+    revealVoterIdentities: original.revealVoterIdentities,
+    emailTemplate: original.emailTemplate,
     electionLink: `${process.env.APP_BASE_URL}/vote/${slug}`,
   });
 

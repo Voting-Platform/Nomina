@@ -4,27 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Rocket } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { StepIndicator } from "@/components/molecules/stepIndicator";
-import { BasicInfoForm } from "@/components/organisms/createElectionWizard/forms/basicInfoForm";
-import { CandidateEntryForm } from "@/components/organisms/createElectionWizard/forms/candidateEntryForm";
-import { VotingRulesForm } from "@/components/organisms/createElectionWizard/forms/votingRulesForm";
-import { VoterBaseForm } from "@/components/organisms/createElectionWizard/forms/voterBaseForm";
-import { SchedulingForm } from "@/components/organisms/createElectionWizard/forms/schedulingForm";
-import { ReviewSummary } from "@/components/organisms/createElectionWizard/reviewSummary";
-import { createElection } from "@/lib/api/server/election/create-election";
+import { Button, BasicInfoForm, CandidateEntryForm, VotingRulesForm, VoterAccessForm, StepIndicator, SchedulingForm, ReviewSummary } from "@/components";
+import { createElection } from "@/lib/api/server";
 import type {
   CreateCandidateInput,
   VotingRulesInput,
-  VoterBaseInput,
+  VoterAccessInput,
   SchedulingInput,
-} from "@/types/election";
+} from "@/types";
 
 const STEPS = [
   { label: "Basic Info" },
   { label: "Candidates" },
   { label: "Voting Rules" },
-  { label: "Voter Base" },
+  { label: "Voter Access" },
   { label: "Schedule" },
   { label: "Review" },
 ];
@@ -45,10 +38,14 @@ export function WizardContainer() {
   const [votingRules, setVotingRules] = useState<VotingRulesInput>({
     maxTotalVotesPerVoter: 1,
     maxVotesPerCandidate: 1,
-    allowVoterVisibility: false,
   });
-  const [voterBase, setVoterBase] = useState<VoterBaseInput>({
-    mode: "anyone_with_link",
+  const [voterAccess, setVoterAccess] = useState<VoterAccessInput>({
+    accessType: "public",
+    pinEnabled: false,
+    otpRequired: false,
+    collectVoterDetails: false,
+    revealVoterIdentities: false,
+    voters: [],
   });
   const [scheduling, setScheduling] = useState<SchedulingInput>({
     mode: "manual",
@@ -75,11 +72,9 @@ export function WizardContainer() {
           newErrors.votingRules = "Max per candidate cannot exceed max total votes";
         break;
 
-      case 3: // Voter Base
-        if (voterBase.mode === "restricted_emails" && (!voterBase.emails || voterBase.emails.length === 0))
-          newErrors.voterBase = "Add at least one email address";
-        if (voterBase.mode === "restricted_domain" && (!voterBase.domains || voterBase.domains.length === 0))
-          newErrors.voterBase = "Enter an email domain";
+      case 3: // Voter Access
+        if (voterAccess.accessType === "protected" && voterAccess.voters.length === 0)
+          newErrors.voterAccess = "Add at least one voter email for a protected election";
         break;
 
       case 4: // Scheduling
@@ -120,7 +115,7 @@ export function WizardContainer() {
           description: description.trim(),
           candidates: cleanCandidates,
           votingRules,
-          voterBase,
+          voterAccess,
           scheduling,
         });
         router.push(`/elections/${result._id}`);
@@ -137,7 +132,7 @@ export function WizardContainer() {
     description,
     candidates: candidates.filter((c) => c.name.trim()),
     votingRules,
-    voterBase,
+    voterAccess,
     scheduling,
   };
 
@@ -157,7 +152,7 @@ export function WizardContainer() {
             {currentStep === 0 && "Give your election a title and description"}
             {currentStep === 1 && "Add the candidates voters will choose from"}
             {currentStep === 2 && "Configure how voting works"}
-            {currentStep === 3 && "Decide who can vote in this election"}
+            {currentStep === 3 && "Decide who can vote and how voters are verified"}
             {currentStep === 4 && "Choose when the election opens and closes"}
             {currentStep === 5 && "Review everything before creating your election"}
           </p>
@@ -184,7 +179,7 @@ export function WizardContainer() {
           <VotingRulesForm rules={votingRules} onRulesChange={setVotingRules} errors={errors} />
         )}
         {currentStep === 3 && (
-          <VoterBaseForm voterBase={voterBase} onVoterBaseChange={setVoterBase} errors={errors} />
+          <VoterAccessForm value={voterAccess} onChange={setVoterAccess} errors={errors} />
         )}
         {currentStep === 4 && (
           <SchedulingForm scheduling={scheduling} onSchedulingChange={setScheduling} errors={errors} />

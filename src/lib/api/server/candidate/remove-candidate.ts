@@ -1,28 +1,26 @@
 "use server";
 
 import { connectDB } from "@/config";
-import { Candidate, Election } from "@/models";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { removeCandidateSchema } from "@/lib/api/server/validation/candidate-schemas";
 
 export async function removeCandidate(candidateId: string) {
   const user = await requireAuth();
-  assertObjectId(candidateId, "Candidate");
+
+  const parsed = removeCandidateSchema.safeParse({ candidateId });
+  if (!parsed.success) throw new Error("Invalid input");
 
   await connectDB();
 
   const candidate = await Candidate.findOne({
-    _id: candidateId,
+    _id: parsed.data.candidateId,
     deletedAt: null,
   });
   if (!candidate) throw new Error("Candidate not found");
 
-  const election = await Election.findOne({
-    _id: candidate.election,
-    deletedAt: null,
-  });
-  if (!election || election.createdBy.toString() !== user.id) {
-    throw new Error("Election not found");
-  }
+  await getOwnedElection(candidate.election.toString(), user.id);
 
   candidate.deletedAt = new Date();
   await candidate.save();

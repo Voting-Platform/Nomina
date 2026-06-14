@@ -1,22 +1,12 @@
 "use server";
 
-import { connectDB } from "@/config/db";
-import { Election } from "@/models/Election";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
 
 export async function generateElectionLink(electionId: string) {
   const user = await requireAuth();
-  assertObjectId(electionId, "Election");
 
-  await connectDB();
-
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election || election.createdBy.toString() !== user.id) {
-    throw new Error("Election not found");
-  }
+  const election = await getOwnedElection(electionId, user.id);
 
   const link = `${process.env.APP_BASE_URL}/vote/${election.slug}`;
   election.electionLink = link;

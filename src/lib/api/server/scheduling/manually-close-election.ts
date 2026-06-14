@@ -1,22 +1,12 @@
 "use server";
 
-import { connectDB } from "@/config";
-import { Election } from "@/models";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
 
 export async function manuallyCloseElection(electionId: string) {
   const user = await requireAuth();
-  assertObjectId(electionId, "Election");
 
-  await connectDB();
-
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election || election.createdBy.toString() !== user.id) {
-    throw new Error("Election not found");
-  }
+  const election = await getOwnedElection(electionId, user.id);
 
   if (election.schedulingMode !== "manual") {
     throw new Error("This election uses automatic scheduling");

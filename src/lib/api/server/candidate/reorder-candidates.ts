@@ -1,37 +1,26 @@
 "use server";
 
 import { connectDB } from "@/config";
-import { Candidate, Election } from "@/models";
-import { requireAuth, assertObjectId } from "@/lib/api/server/require-auth";
-import { Types } from "mongoose";
+import { Candidate } from "@/models";
+import { requireAuth } from "@/lib/api/server/require-auth";
+import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { reorderCandidatesSchema } from "@/lib/api/server/validation/candidate-schemas";
 
 export async function reorderCandidates(
   electionId: string,
   orderedIds: string[]
 ) {
   const user = await requireAuth();
-  assertObjectId(electionId, "Election");
 
-  if (!Array.isArray(orderedIds) || orderedIds.length > 100) {
-    throw new Error("Invalid candidate list");
-  }
-  if (orderedIds.some((id) => !Types.ObjectId.isValid(id))) {
-    throw new Error("Invalid candidate list");
-  }
+  const parsed = reorderCandidatesSchema.safeParse({ electionId, orderedIds });
+  if (!parsed.success) throw new Error("Invalid input");
 
   await connectDB();
+  const election = await getOwnedElection(parsed.data.electionId, user.id);
 
-  const election = await Election.findOne({
-    _id: electionId,
-    deletedAt: null,
-  });
-  if (!election || election.createdBy.toString() !== user.id) {
-    throw new Error("Election not found");
-  }
-
-  const bulkOps = orderedIds.map((id, index) => ({
+  const bulkOps = parsed.data.orderedIds.map((id, index) => ({
     updateOne: {
-      filter: { _id: id, election: electionId },
+      filter: { _id: id, election: election._id },
       update: { $set: { position: index } },
     },
   }));
