@@ -9,9 +9,10 @@ interface VotingRulesFormProps {
   rules: VotingRulesInput;
   onRulesChange: (rules: VotingRulesInput) => void;
   errors?: Record<string, string>;
+  disabled?: boolean;
 }
 
-export function VotingRulesForm({ rules, onRulesChange, errors }: VotingRulesFormProps) {
+export function VotingRulesForm({ rules, onRulesChange, errors, disabled }: VotingRulesFormProps) {
   return (
     <div className="space-y-6">
       {errors?.votingRules && (
@@ -30,13 +31,15 @@ export function VotingRulesForm({ rules, onRulesChange, errors }: VotingRulesFor
           type="number"
           min={1}
           max={100}
-          value={rules.maxTotalVotesPerVoter}
-          onChange={(e) =>
+          value={rules.maxTotalVotesPerVoter === 0 ? "" : rules.maxTotalVotesPerVoter}
+          onChange={(e) => {
+            const val = e.target.value;
             onRulesChange({
               ...rules,
-              maxTotalVotesPerVoter: Math.max(1, parseInt(e.target.value) || 1),
-            })
-          }
+              maxTotalVotesPerVoter: val === "" ? 0 : (parseInt(val) || 0),
+            });
+          }}
+          disabled={disabled}
           className="w-32"
         />
       </div>
@@ -51,14 +54,16 @@ export function VotingRulesForm({ rules, onRulesChange, errors }: VotingRulesFor
           id="max-votes-candidate"
           type="number"
           min={1}
-          max={rules.maxTotalVotesPerVoter}
-          value={rules.maxVotesPerCandidate}
-          onChange={(e) =>
+          max={rules.maxTotalVotesPerVoter || 1}
+          value={rules.maxVotesPerCandidate === 0 ? "" : rules.maxVotesPerCandidate}
+          onChange={(e) => {
+            const val = e.target.value;
             onRulesChange({
               ...rules,
-              maxVotesPerCandidate: Math.max(1, parseInt(e.target.value) || 1),
-            })
-          }
+              maxVotesPerCandidate: val === "" ? 0 : (parseInt(val) || 0),
+            });
+          }}
+          disabled={disabled}
           className="w-32"
         />
       </div>
@@ -82,6 +87,7 @@ export function VotingRulesForm({ rules, onRulesChange, errors }: VotingRulesFor
           onCheckedChange={(checked) =>
             onRulesChange({ ...rules, allowVoterVisibility: checked as boolean })
           }
+          disabled={disabled}
         />
       </div>
     </div>

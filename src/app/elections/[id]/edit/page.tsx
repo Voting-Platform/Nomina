@@ -27,6 +27,7 @@ export default async function EditElectionPage({
         initialVoterBaseMode={election.voterBaseMode}
         initialAllowedEmails={election.allowedVoterEmails || []}
         initialAllowedDomains={election.allowedVoterDomains || []}
+        status={election.status}
       />
     </div>
   );

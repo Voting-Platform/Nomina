@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Rocket } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { StepIndicator } from "@/components/molecules/stepIndicator";
 import { BasicInfoForm } from "@/components/organisms/createElectionWizard/forms/basicInfoForm";
 import { CandidateEntryForm } from "@/components/organisms/createElectionWizard/forms/candidateEntryForm";
@@ -35,6 +43,10 @@ export function WizardContainer() {
   const [currentStep, setCurrentStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // ─── Discard changes states ───
+  const [showConfirmDiscard, setShowConfirmDiscard] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
   // ─── Form state ───
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -54,6 +66,49 @@ export function WizardContainer() {
     mode: "manual",
   });
 
+  const hasUnsavedChanges =
+    title.trim().length > 0 ||
+    description.trim().length > 0 ||
+    candidates.some((c) => c.name.trim().length > 0);
+
+  // Prompt before unload (refresh, exit tab)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+  // Intercept Next.js link navigation away from create election flow
+  useEffect(() => {
+    const handleAnchorClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+
+      const target = e.target as HTMLElement;
+      const anchor = target.closest("a");
+      if (anchor) {
+        const href = anchor.getAttribute("href");
+        if (href && !href.startsWith("#") && href !== "/elections/create") {
+          e.preventDefault();
+          e.stopPropagation();
+          setPendingHref(href);
+          setShowConfirmDiscard(true);
+        }
+      }
+    };
+
+    window.addEventListener("click", handleAnchorClick, true);
+    return () => {
+      window.removeEventListener("click", handleAnchorClick, true);
+    };
+  }, [hasUnsavedChanges]);
+
   // ─── Validation ───
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -69,12 +124,14 @@ export function WizardContainer() {
         if (validCandidates.length < 2)
           newErrors.candidates = "At least 2 candidates with names are required";
         break;
-
       case 2: // Voting Rules
-        if (votingRules.maxVotesPerCandidate > votingRules.maxTotalVotesPerVoter)
+        if (!votingRules.maxTotalVotesPerVoter || votingRules.maxTotalVotesPerVoter < 1)
+          newErrors.votingRules = "Max total votes per voter must be at least 1";
+        else if (!votingRules.maxVotesPerCandidate || votingRules.maxVotesPerCandidate < 1)
+          newErrors.votingRules = "Max votes per candidate must be at least 1";
+        else if (votingRules.maxVotesPerCandidate > votingRules.maxTotalVotesPerVoter)
           newErrors.votingRules = "Max per candidate cannot exceed max total votes";
         break;
-
       case 3: // Voter Base
         if (voterBase.mode === "restricted_emails" && (!voterBase.emails || voterBase.emails.length === 0))
           newErrors.voterBase = "Add at least one email address";
@@ -84,11 +141,20 @@ export function WizardContainer() {
 
       case 4: // Scheduling
         if (scheduling.mode === "automatic") {
-          if (!scheduling.scheduledStartAt) newErrors.scheduling = "Start time is required";
-          if (!scheduling.scheduledEndAt) newErrors.scheduling = "End time is required";
-          if (scheduling.scheduledStartAt && scheduling.scheduledEndAt) {
-            if (new Date(scheduling.scheduledStartAt) >= new Date(scheduling.scheduledEndAt))
+          if (!scheduling.scheduledStartAt) {
+            newErrors.scheduling = "Start time is required";
+          } else if (!scheduling.scheduledEndAt) {
+            newErrors.scheduling = "End time is required";
+          } else {
+            const startDate = new Date(scheduling.scheduledStartAt);
+            const endDate = new Date(scheduling.scheduledEndAt);
+            const now = new Date();
+
+            if (startDate.getTime() < now.getTime() - 60 * 1000) {
+              newErrors.scheduling = "Start time cannot be in the past";
+            } else if (startDate >= endDate) {
               newErrors.scheduling = "Start time must be before end time";
+            }
           }
         }
         break;
@@ -229,6 +295,41 @@ export function WizardContainer() {
           </Button>
         )}
       </div>
+
+      <Dialog open={showConfirmDiscard} onOpenChange={setShowConfirmDiscard}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Discard Election?</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes. Leaving this page will discard the current election progress.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowConfirmDiscard(false);
+                setPendingHref(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-[var(--destructive)] text-white hover:bg-[var(--destructive-hover)] border-0"
+              onClick={() => {
+                setShowConfirmDiscard(false);
+                if (pendingHref) {
+                  router.push(pendingHref);
+                }
+              }}
+            >
+              Discard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

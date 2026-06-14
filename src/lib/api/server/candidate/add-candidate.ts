@@ -28,6 +28,9 @@ export async function addCandidate(
   if (election.createdBy.toString() !== dbUser._id.toString()) {
     throw new Error("You do not have permission to modify this election");
   }
+  if (["open", "closed", "archived"].includes(election.status)) {
+    throw new Error("Cannot add candidates once the election has started");
+  }
 
   // Get next position
   const lastCandidate = await Candidate.findOne({

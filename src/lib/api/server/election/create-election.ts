@@ -44,8 +44,8 @@ export async function createElection(data: CreateElectionInput) {
 
     // Scheduling
     schedulingMode: data.scheduling.mode,
-    scheduledStartAt: data.scheduling.scheduledStartAt || null,
-    scheduledEndAt: data.scheduling.scheduledEndAt || null,
+    scheduledStartAt: data.scheduling.scheduledStartAt ? new Date(data.scheduling.scheduledStartAt) : null,
+    scheduledEndAt: data.scheduling.scheduledEndAt ? new Date(data.scheduling.scheduledEndAt) : null,
 
     // Generate election link
     electionLink: `${process.env.APP_BASE_URL}/vote/${slug}`,
@@ -63,16 +63,34 @@ export async function createElection(data: CreateElectionInput) {
     await Candidate.insertMany(candidateDocs);
   }
 
-  // If scheduling mode is automatic and start time is in the future, set status to scheduled
+  // If scheduling mode is automatic, set status based on timing
   if (
     data.scheduling.mode === "automatic" &&
-    data.scheduling.scheduledStartAt
+    data.scheduling.scheduledStartAt &&
+    data.scheduling.scheduledEndAt
   ) {
-    const startTime = new Date(data.scheduling.scheduledStartAt);
-    if (startTime > new Date()) {
-      election.status = "scheduled";
-      await election.save();
+    const startAt = new Date(data.scheduling.scheduledStartAt);
+    const endAt = new Date(data.scheduling.scheduledEndAt);
+    const now = new Date();
+
+    if (startAt.getTime() < now.getTime() - 60 * 1000) {
+      throw new Error("Start time cannot be in the past");
     }
+
+    if (startAt >= endAt) {
+      throw new Error("Start time must be before end time");
+    }
+
+    if (startAt > now) {
+      election.status = "scheduled";
+    } else if (endAt > now) {
+      election.status = "open";
+      election.manuallyOpenedAt = now;
+    } else {
+      election.status = "closed";
+      election.manuallyClosedAt = now;
+    }
+    await election.save();
   }
 
   return { _id: election._id.toString() };

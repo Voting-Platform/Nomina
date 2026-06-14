@@ -1,14 +1,15 @@
 "use client";
 
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Clock, Zap } from "lucide-react";
+import { Clock, Zap, Calendar, Globe } from "lucide-react";
 import type { SchedulingInput, SchedulingMode } from "@/types/election";
+import CalendarInput from "@/components/ui/calendar-input";
 
 interface SchedulingFormProps {
   scheduling: SchedulingInput;
   onSchedulingChange: (scheduling: SchedulingInput) => void;
   errors?: Record<string, string>;
+  disabled?: boolean;
 }
 
 const MODE_OPTIONS: { value: SchedulingMode; label: string; description: string; icon: React.ElementType }[] = [
@@ -26,7 +27,7 @@ const MODE_OPTIONS: { value: SchedulingMode; label: string; description: string;
   },
 ];
 
-export function SchedulingForm({ scheduling, onSchedulingChange, errors }: SchedulingFormProps) {
+export function SchedulingForm({ scheduling, onSchedulingChange, errors, disabled }: SchedulingFormProps) {
   return (
     <div className="space-y-4">
       {errors?.scheduling && (
@@ -44,6 +45,7 @@ export function SchedulingForm({ scheduling, onSchedulingChange, errors }: Sched
             <button
               key={option.value}
               type="button"
+              disabled={disabled}
               onClick={() =>
                 onSchedulingChange({ ...scheduling, mode: option.value })
               }
@@ -52,7 +54,7 @@ export function SchedulingForm({ scheduling, onSchedulingChange, errors }: Sched
                   isSelected
                     ? "border-[var(--primary)] bg-[var(--primary-light)]/50 ring-2 ring-[var(--primary)]/20"
                     : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)]"
-                }`}
+                } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
             >
               <div
                 className={`flex h-10 w-10 items-center justify-center rounded-lg
@@ -75,49 +77,74 @@ export function SchedulingForm({ scheduling, onSchedulingChange, errors }: Sched
 
       {/* Automatic mode: date/time pickers */}
       {scheduling.mode === "automatic" && (
-        <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 mt-2">
-          <div className="space-y-2">
-            <Label htmlFor="start-datetime">Start Date & Time</Label>
-            <Input
-              id="start-datetime"
-              type="datetime-local"
-              value={scheduling.scheduledStartAt || ""}
-              onChange={(e) =>
-                onSchedulingChange({
-                  ...scheduling,
-                  scheduledStartAt: e.target.value,
-                })
-              }
-            />
+        <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 mt-2 shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-sm font-medium text-[var(--text-primary)]">
+                <Calendar className="h-4 w-4 text-[var(--primary)]" />
+                Start Date & Time
+              </Label>
+              <CalendarInput
+                value={scheduling.scheduledStartAt ? new Date(scheduling.scheduledStartAt) : undefined}
+                onSelect={(d) =>
+                  onSchedulingChange({
+                    ...scheduling,
+                    scheduledStartAt: d ? d.toISOString() : undefined,
+                  })
+                }
+                disabled={disabled}
+                disablePast={true}
+                placeholder="Select start date & time"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-sm font-medium text-[var(--text-primary)]">
+                <Calendar className="h-4 w-4 text-[var(--primary)]" />
+                End Date & Time
+              </Label>
+              <CalendarInput
+                value={scheduling.scheduledEndAt ? new Date(scheduling.scheduledEndAt) : undefined}
+                onSelect={(d) =>
+                  onSchedulingChange({
+                    ...scheduling,
+                    scheduledEndAt: d ? d.toISOString() : undefined,
+                  })
+                }
+                disabled={disabled}
+                placeholder="Select end date & time"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="end-datetime">End Date & Time</Label>
-            <Input
-              id="end-datetime"
-              type="datetime-local"
-              value={scheduling.scheduledEndAt || ""}
-              onChange={(e) =>
-                onSchedulingChange({
-                  ...scheduling,
-                  scheduledEndAt: e.target.value,
-                })
-              }
-              min={scheduling.scheduledStartAt || ""}
-            />
-          </div>
-          {scheduling.scheduledStartAt && scheduling.scheduledEndAt && (
-            <p className="text-xs text-[var(--text-secondary)]">
-              Duration:{" "}
-              {(() => {
-                const start = new Date(scheduling.scheduledStartAt);
-                const end = new Date(scheduling.scheduledEndAt);
-                const hours = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-                if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""}`;
-                const days = Math.round(hours / 24);
-                return `${days} day${days !== 1 ? "s" : ""}`;
-              })()}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border)] mt-2">
+            {/* Timezone label */}
+            <p className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+              <Globe className="h-3.5 w-3.5" />
+              Times are in local time ({typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC"})
             </p>
-          )}
+
+            {/* Duration label */}
+            {scheduling.scheduledStartAt && scheduling.scheduledEndAt && (
+              <div className="flex items-center gap-1.5 rounded-full bg-[var(--primary-light)] px-3 py-1 text-xs text-[var(--primary)] font-semibold">
+                <Clock className="h-3.5 w-3.5" />
+                <span>
+                  Duration:{" "}
+                  {(() => {
+                    const start = new Date(scheduling.scheduledStartAt);
+                    const end = new Date(scheduling.scheduledEndAt);
+                    const diffMs = end.getTime() - start.getTime();
+                    if (isNaN(diffMs) || diffMs <= 0) return "Invalid";
+                    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+                    if (diffHours < 24) return `${diffHours} hr${diffHours !== 1 ? "s" : ""}`;
+                    const diffDays = Math.floor(diffHours / 24);
+                    const remainingHours = diffHours % 24;
+                    if (remainingHours === 0) return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
+                    return `${diffDays} day${diffDays !== 1 ? "s" : ""} ${remainingHours} hr${remainingHours !== 1 ? "s" : ""}`;
+                  })()}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

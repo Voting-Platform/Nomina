@@ -12,7 +12,7 @@ import { CandidateImageField } from "@/components";
 import { addCandidate } from "@/lib/api/server/candidate/add-candidate";
 import { updateCandidate } from "@/lib/api/server/candidate/update-candidate";
 import { removeCandidate } from "@/lib/api/server/candidate/remove-candidate";
-import { Plus, Pencil, Trash2, Save, X, Vote } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, Vote, AlertTriangle } from "lucide-react";
 
 function candidateInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -34,7 +34,7 @@ function CandidateAvatar({
   if (imageUrl) {
     return (
       <div className={shell}>
-        <Image src={imageUrl} alt="" width={56} height={56} preload className="h-full w-full object-cover" />
+        <Image src={imageUrl} alt="" width={56} height={56} className="h-full w-full object-cover" />
       </div>
     );
   }
@@ -61,9 +61,10 @@ interface CandidateData {
 interface CandidatesManagerProps {
   electionId: string;
   initialCandidates: CandidateData[];
+  status: string;
 }
 
-export function CandidatesManager({ electionId, initialCandidates }: CandidatesManagerProps) {
+export function CandidatesManager({ electionId, initialCandidates, status }: CandidatesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -83,7 +84,10 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  const hasStarted = ["open", "closed", "archived"].includes(status);
+
   const handleAdd = () => {
+    if (hasStarted) return;
     if (!newName.trim()) return;
     startTransition(async () => {
       await addCandidate(electionId, {
@@ -100,6 +104,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
   };
 
   const startEdit = (c: CandidateData) => {
+    if (hasStarted) return;
     setEditId(c._id);
     setEditName(c.name);
     setEditDesc(c.description);
@@ -112,7 +117,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
   };
 
   const handleUpdate = () => {
-    if (!editId || !editName.trim()) return;
+    if (hasStarted || !editId || !editName.trim()) return;
     startTransition(async () => {
       await updateCandidate(editId, {
         name: editName.trim(),
@@ -126,7 +131,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
   };
 
   const confirmDelete = () => {
-    if (!deleteId) return;
+    if (hasStarted || !deleteId) return;
     startTransition(async () => {
       await removeCandidate(deleteId);
       setDeleteDialogOpen(false);
@@ -137,6 +142,18 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
 
   return (
     <div className="space-y-4">
+      {hasStarted && (
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-light)]/50 p-4 text-[var(--warning)] shadow-sm animate-in fade-in duration-200">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--warning)] mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-sm text-[var(--text-primary)]">Election has started</h4>
+            <p className="text-xs mt-1 text-[var(--text-secondary)] leading-relaxed">
+              You cannot edit the candidates, rules, or settings once the election has started to ensure voting integrity.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Candidate list */}
       <div className="space-y-3">
         {initialCandidates.map((c, i) => (
@@ -148,7 +165,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
               {i + 1}
             </span>
 
-            {editId === c._id ? (
+            {editId === c._id && !hasStarted ? (
               <CandidateImageField
                 imageUrl={editImageUrl}
                 onImageUrlChange={setEditImageUrl}
@@ -161,7 +178,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
               />
             )}
 
-            {editId === c._id ? (
+            {editId === c._id && !hasStarted ? (
               <div className="flex-1 min-w-0 space-y-2">
                 <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" />
                 <Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Description" rows={2} />
@@ -188,7 +205,7 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
               </div>
             )}
 
-            {editId !== c._id && (
+            {editId !== c._id && !hasStarted && (
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -213,46 +230,48 @@ export function CandidatesManager({ electionId, initialCandidates }: CandidatesM
       </div>
 
       {/* Add form */}
-      {showAddForm ? (
-        <div className="rounded-xl border-2 border-dashed border-[var(--primary)]/30 bg-[var(--primary-light)]/30 p-4 space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <CandidateImageField
-              imageUrl={newImageUrl}
-              onImageUrlChange={setNewImageUrl}
-              disabled={isPending}
-            />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Input placeholder="Candidate name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-              <Textarea
-                placeholder="Description (optional)"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                rows={2}
+      {!hasStarted && (
+        showAddForm ? (
+          <div className="rounded-xl border-2 border-dashed border-[var(--primary)]/30 bg-[var(--primary-light)]/30 p-4 space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <CandidateImageField
+                imageUrl={newImageUrl}
+                onImageUrlChange={setNewImageUrl}
+                disabled={isPending}
               />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Input placeholder="Candidate name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <Textarea
+                  placeholder="Description (optional)"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleAdd} disabled={isPending || !newName.trim()}>
+                <Plus className="h-3.5 w-3.5" /> {isPending ? "Adding..." : "Add"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewName("");
+                  setNewDescription("");
+                  setNewImageUrl(undefined);
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleAdd} disabled={isPending || !newName.trim()}>
-              <Plus className="h-3.5 w-3.5" /> {isPending ? "Adding..." : "Add"}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setShowAddForm(false);
-                setNewName("");
-                setNewDescription("");
-                setNewImageUrl(undefined);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button variant="outline" onClick={() => setShowAddForm(true)} className="w-full">
-          <Plus className="h-4 w-4" /> Add Candidate
-        </Button>
+        ) : (
+          <Button variant="outline" onClick={() => setShowAddForm(true)} className="w-full">
+            <Plus className="h-4 w-4" /> Add Candidate
+          </Button>
+        )
       )}
 
       {/* Delete confirmation */}

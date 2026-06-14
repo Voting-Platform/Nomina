@@ -3,6 +3,7 @@
 import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
 import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { serialize } from "@/lib/serialize";
 import type { VotingRulesInput } from "@/types/election";
 
 /**
@@ -26,6 +27,9 @@ export async function updateVotingRules(
   if (election.createdBy.toString() !== dbUser._id.toString()) {
     throw new Error("You do not have permission to modify this election");
   }
+  if (["open", "closed", "archived"].includes(election.status)) {
+    throw new Error("Cannot modify voting rules once the election has started");
+  }
 
   // Validate rules
   if (rules.maxTotalVotesPerVoter < 1) {
@@ -46,7 +50,5 @@ export async function updateVotingRules(
 
   await election.save();
 
-  const result = election.toObject();
-  result._id = result._id.toString();
-  return result;
+  return serialize(election.toObject());
 }

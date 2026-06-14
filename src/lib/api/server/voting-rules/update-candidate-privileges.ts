@@ -4,6 +4,7 @@ import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
 import { Candidate } from "@/models/Candidate";
 import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { serialize } from "@/lib/serialize";
 import type { CandidatePrivilegesInput } from "@/types/election";
 
 /**
@@ -34,6 +35,9 @@ export async function updateCandidatePrivileges(
   if (election.createdBy.toString() !== dbUser._id.toString()) {
     throw new Error("You do not have permission to modify this election");
   }
+  if (["open", "closed", "archived"].includes(election.status)) {
+    throw new Error("Cannot modify candidate privileges once the election has started");
+  }
 
   // Validate
   if (
@@ -48,8 +52,5 @@ export async function updateCandidatePrivileges(
 
   await candidate.save();
 
-  const result = candidate.toObject();
-  result._id = result._id.toString();
-  result.election = result.election.toString();
-  return result;
+  return serialize(candidate.toObject());
 }

@@ -35,6 +35,9 @@ export async function updateCandidate(
   if (election.createdBy.toString() !== dbUser._id.toString()) {
     throw new Error("You do not have permission to modify this election");
   }
+  if (["open", "closed", "archived"].includes(election.status)) {
+    throw new Error("Cannot edit candidates once the election has started");
+  }
 
   if (data.name !== undefined) candidate.name = data.name;
   if (data.description !== undefined) candidate.description = data.description;

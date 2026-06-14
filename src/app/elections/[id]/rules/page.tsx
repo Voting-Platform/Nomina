@@ -28,6 +28,7 @@ export default async function RulesPage({
           allowVoterVisibility: election.allowVoterVisibility,
         }}
         candidates={election.candidates}
+        status={election.status}
       />
     </div>
   );

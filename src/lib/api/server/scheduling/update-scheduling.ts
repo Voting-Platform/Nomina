@@ -3,6 +3,7 @@
 import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
 import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { serialize } from "@/lib/serialize";
 import type { SchedulingInput } from "@/types/election";
 
 /**
@@ -41,6 +42,11 @@ export async function updateScheduling(
 
     const startAt = new Date(config.scheduledStartAt);
     const endAt = new Date(config.scheduledEndAt);
+    const now = new Date();
+
+    if (startAt.getTime() < now.getTime() - 60 * 1000) {
+      throw new Error("Start time cannot be in the past");
+    }
 
     if (startAt >= endAt) {
       throw new Error("Start time must be before end time");
@@ -50,11 +56,11 @@ export async function updateScheduling(
     election.scheduledEndAt = endAt;
 
     // Auto-set status based on timing
-    if (startAt > new Date()) {
+    if (startAt > now) {
       election.status = "scheduled";
-    } else if (endAt > new Date()) {
+    } else if (endAt > now) {
       election.status = "open";
-      election.manuallyOpenedAt = new Date();
+      election.manuallyOpenedAt = now;
     }
   } else {
     // Manual mode — clear scheduled dates
@@ -65,7 +71,5 @@ export async function updateScheduling(
 
   await election.save();
 
-  const result = election.toObject();
-  result._id = result._id.toString();
-  return result;
+  return serialize(election.toObject());
 }

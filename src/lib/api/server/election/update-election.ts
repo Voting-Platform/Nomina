@@ -29,6 +29,10 @@ export async function updateElection(
     throw new Error("You do not have permission to edit this election");
   }
 
+  if (["open", "closed", "archived"].includes(election.status)) {
+    throw new Error("Cannot edit election settings once the election has started");
+  }
+
   // Apply updates
   if (data.title !== undefined) election.title = data.title;
   if (data.description !== undefined) election.description = data.description;

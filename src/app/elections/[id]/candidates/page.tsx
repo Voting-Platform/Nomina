@@ -20,7 +20,7 @@ export default async function CandidatesPage({
       <p className="text-sm text-[var(--text-secondary)] mb-6">
         Add, edit, or remove candidates for this election
       </p>
-      <CandidatesManager electionId={id} initialCandidates={election.candidates} />
+      <CandidatesManager electionId={id} initialCandidates={election.candidates} status={election.status} />
     </div>
   );
 }

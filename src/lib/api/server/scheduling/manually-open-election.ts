@@ -3,6 +3,7 @@
 import { connectDB } from "@/config/db";
 import { Election } from "@/models/Election";
 import { getOrSyncDbUser } from "@/lib/api/server/user";
+import { serialize } from "@/lib/serialize";
 
 /**
  * Manually opens an election for voting.
@@ -36,7 +37,5 @@ export async function manuallyOpenElection(electionId: string) {
 
   await election.save();
 
-  const result = election.toObject();
-  result._id = result._id.toString();
-  return result;
+  return serialize(election.toObject());
 }

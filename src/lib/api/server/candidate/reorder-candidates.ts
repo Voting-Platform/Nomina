@@ -27,6 +27,9 @@ export async function reorderCandidates(
   if (election.createdBy.toString() !== dbUser._id.toString()) {
     throw new Error("You do not have permission to modify this election");
   }
+  if (["open", "closed", "archived"].includes(election.status)) {
+    throw new Error("Cannot reorder candidates once the election has started");
+  }
 
   // Batch update positions
   const bulkOps = orderedIds.map((id, index) => ({

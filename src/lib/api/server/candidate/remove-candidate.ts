@@ -30,6 +30,9 @@ export async function removeCandidate(candidateId: string) {
   if (election.createdBy.toString() !== dbUser._id.toString()) {
     throw new Error("You do not have permission to modify this election");
   }
+  if (["open", "closed", "archived"].includes(election.status)) {
+    throw new Error("Cannot remove candidates once the election has started");
+  }
 
   candidate.deletedAt = new Date();
   await candidate.save();
