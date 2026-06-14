@@ -23,7 +23,12 @@ function GoogleIcon({ className }: { className?: string }) {
 
 export default async function LoginPage() {
   const session = await auth();
-  if (session) redirect("/dashboard");
+  // Only redirect fully-valid sessions. A session whose user.id is an
+  // Auth.js-internal UUID (not a 24-char hex ObjectId) must re-authenticate
+  // so a fresh token with the correct MongoDB id is issued.
+  if (session?.user?.id && /^[a-f\d]{24}$/i.test(session.user.id)) {
+    redirect("/dashboard");
+  }
 
   async function signInWithGoogle() {
     "use server";
