@@ -2,6 +2,7 @@
 
 import { requireAuth } from "@/lib/api/server/require-auth";
 import { getOwnedElection } from "@/lib/api/server/get-owned-election";
+import { serialize } from "@/lib";
 
 export async function manuallyCloseElection(electionId: string) {
   const user = await requireAuth();
@@ -21,7 +22,5 @@ export async function manuallyCloseElection(electionId: string) {
 
   await election.save();
 
-  const result = election.toObject();
-  result._id = result._id.toString();
-  return result;
+  return serialize(election.toObject());
 }

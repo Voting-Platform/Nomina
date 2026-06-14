@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/api/server/require-auth";
 import { getOwnedElection } from "@/lib/api/server/get-owned-election";
 import { schedulingSchema } from "@/lib/api/server/validation/election-schemas";
+import { serialize } from "@/lib";
 import type { SchedulingInput } from "@/types";
 
 export async function updateScheduling(
@@ -29,6 +30,11 @@ export async function updateScheduling(
 
     const startAt = new Date(config.scheduledStartAt);
     const endAt = new Date(config.scheduledEndAt);
+    const now = new Date();
+
+    if (startAt.getTime() < now.getTime() - 60 * 1000) {
+      throw new Error("Start time cannot be in the past");
+    }
 
     if (startAt >= endAt) {
       throw new Error("Start time must be before end time");
@@ -37,11 +43,12 @@ export async function updateScheduling(
     election.scheduledStartAt = startAt;
     election.scheduledEndAt = endAt;
 
-    if (startAt > new Date()) {
+    // Auto-set status based on timing
+    if (startAt > now) {
       election.status = "scheduled";
-    } else if (endAt > new Date()) {
+    } else if (endAt > now) {
       election.status = "open";
-      election.manuallyOpenedAt = new Date();
+      election.manuallyOpenedAt = now;
     }
   } else {
     election.scheduledStartAt = null;
@@ -51,7 +58,5 @@ export async function updateScheduling(
 
   await election.save();
 
-  const result = election.toObject();
-  result._id = result._id.toString();
-  return result;
+  return serialize(election.toObject());
 }

@@ -12,7 +12,7 @@ import { addCandidate } from "@/lib/api/server/candidate/add-candidate";
 import { updateCandidate } from "@/lib/api/server/candidate/update-candidate";
 import { removeCandidate } from "@/lib/api/server/candidate/remove-candidate";
 import { getElectionById } from "@/lib/api/server/election/get-election-by-id";
-import { Plus, Pencil, Trash2, Save, X, Vote } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, Vote, AlertTriangle } from "lucide-react";
 import type { ElectionDetailData, CandidateWithVoteCount } from "@/types";
 
 function candidateInitials(name: string): string {
@@ -91,6 +91,7 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
   });
 
   const candidates = election.candidates;
+  const hasStarted = ["open", "closed", "archived"].includes(election.status);
 
   // Add candidate state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -109,6 +110,7 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleAdd = () => {
+    if (hasStarted) return;
     if (!newName.trim()) return;
     startTransition(async () => {
       await addCandidate(electionId, {
@@ -125,6 +127,7 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
   };
 
   const startEdit = (c: typeof candidates[number]) => {
+    if (hasStarted) return;
     setEditId(c._id);
     setEditName(c.name);
     setEditDesc(c.description);
@@ -137,7 +140,7 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
   };
 
   const handleUpdate = () => {
-    if (!editId || !editName.trim()) return;
+    if (hasStarted || !editId || !editName.trim()) return;
     startTransition(async () => {
       await updateCandidate(editId, {
         name: editName.trim(),
@@ -151,7 +154,7 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
   };
 
   const confirmDelete = () => {
-    if (!deleteId) return;
+    if (hasStarted || !deleteId) return;
     startTransition(async () => {
       await removeCandidate(deleteId);
       setDeleteDialogOpen(false);
@@ -162,6 +165,18 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
 
   return (
     <div className="space-y-4">
+      {hasStarted && (
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-light)]/50 p-4 text-[var(--warning)] shadow-sm animate-in fade-in duration-200">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--warning)] mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-sm text-[var(--text-primary)]">Election has started</h4>
+            <p className="text-xs mt-1 text-[var(--text-secondary)] leading-relaxed">
+              You cannot edit the candidates, rules, or settings once the election has started to ensure voting integrity.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Candidate grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {candidates.map((c: CandidateWithVoteCount, i: number) => (
@@ -169,7 +184,7 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
             key={c._id}
             className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden transition-all duration-200 hover:shadow-md hover:border-[var(--primary)]/30 flex flex-col"
           >
-            {editId === c._id ? (
+            {editId === c._id && !hasStarted ? (
               /* ── Edit mode ── */
               <div className="p-4 space-y-3 flex-1">
                 <CandidateImageField
@@ -226,23 +241,25 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
                   ) : null}
                 </div>
 
-                {/* Action bar */}
-                <div className="flex border-t border-[var(--border)] divide-x divide-[var(--border)]">
-                  <button
-                    type="button"
-                    onClick={() => startEdit(c)}
-                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-light)] transition-colors"
-                  >
-                    <Pencil className="h-3.5 w-3.5" /> Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setDeleteId(c._id); setDeleteDialogOpen(true); }}
-                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 transition-colors"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" /> Remove
-                  </button>
-                </div>
+                {/* Action bar — hidden when election has started */}
+                {!hasStarted && (
+                  <div className="flex border-t border-[var(--border)] divide-x divide-[var(--border)]">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(c)}
+                      className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-light)] transition-colors"
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setDeleteId(c._id); setDeleteDialogOpen(true); }}
+                      className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Remove
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -250,46 +267,48 @@ export function CandidatesManager({ electionId, initialData }: CandidatesManager
       </div>
 
       {/* Add form */}
-      {showAddForm ? (
-        <div className="rounded-xl border-2 border-dashed border-[var(--primary)]/30 bg-[var(--primary-light)]/30 p-4 space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <CandidateImageField
-              imageUrl={newImageUrl}
-              onImageUrlChange={setNewImageUrl}
-              disabled={isPending}
-            />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Input placeholder="Candidate name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-              <Textarea
-                placeholder="Description (optional)"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                rows={2}
+      {!hasStarted && (
+        showAddForm ? (
+          <div className="rounded-xl border-2 border-dashed border-[var(--primary)]/30 bg-[var(--primary-light)]/30 p-4 space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <CandidateImageField
+                imageUrl={newImageUrl}
+                onImageUrlChange={setNewImageUrl}
+                disabled={isPending}
               />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Input placeholder="Candidate name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <Textarea
+                  placeholder="Description (optional)"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleAdd} disabled={isPending || !newName.trim()}>
+                <Plus className="h-3.5 w-3.5" /> {isPending ? "Adding..." : "Add"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewName("");
+                  setNewDescription("");
+                  setNewImageUrl(undefined);
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleAdd} disabled={isPending || !newName.trim()}>
-              <Plus className="h-3.5 w-3.5" /> {isPending ? "Adding..." : "Add"}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setShowAddForm(false);
-                setNewName("");
-                setNewDescription("");
-                setNewImageUrl(undefined);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button variant="outline" onClick={() => setShowAddForm(true)} className="w-full">
-          <Plus className="h-4 w-4" /> Add Candidate
-        </Button>
+        ) : (
+          <Button variant="outline" onClick={() => setShowAddForm(true)} className="w-full">
+            <Plus className="h-4 w-4" /> Add Candidate
+          </Button>
+        )
       )}
 
       {/* Delete confirmation */}

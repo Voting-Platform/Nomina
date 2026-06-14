@@ -79,11 +79,36 @@ export async function createElection(data: CreateElectionInput) {
   }
 
   if (input.scheduling.mode === "automatic" && input.scheduling.scheduledStartAt) {
-    const startTime = new Date(input.scheduling.scheduledStartAt);
-    if (startTime > new Date()) {
-      election.status = "scheduled";
-      await election.save();
+    const startAt = new Date(input.scheduling.scheduledStartAt);
+    const now = new Date();
+
+    if (startAt.getTime() < now.getTime() - 60 * 1000) {
+      throw new Error("Start time cannot be in the past");
     }
+
+    if (input.scheduling.scheduledEndAt) {
+      const endAt = new Date(input.scheduling.scheduledEndAt);
+
+      if (startAt >= endAt) {
+        throw new Error("Start time must be before end time");
+      }
+
+      if (startAt > now) {
+        election.status = "scheduled";
+      } else if (endAt > now) {
+        election.status = "open";
+        election.manuallyOpenedAt = now;
+      } else {
+        election.status = "closed";
+        election.manuallyClosedAt = now;
+      }
+    } else {
+      if (startAt > now) {
+        election.status = "scheduled";
+      }
+    }
+
+    await election.save();
   }
 
   return { _id: election._id.toString() };

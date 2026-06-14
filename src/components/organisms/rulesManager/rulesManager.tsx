@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Label, Switch, Separator, VotingRulesForm } from "@/components";
 import { updateVotingRules, updateCandidatePrivileges, getElectionById } from "@/lib/api/server";
 import type { ElectionDetailData, VotingRulesInput } from "@/types";
-import { Save, ShieldCheck } from "lucide-react";
+import { Save, ShieldCheck, AlertTriangle } from "lucide-react";
 
 interface RulesManagerProps {
   electionId: string;
@@ -29,8 +29,26 @@ export function RulesManager({ electionId, initialData }: RulesManagerProps) {
     maxVotesPerCandidate: initialData.maxVotesPerCandidate,
   });
   const [saved, setSaved] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const hasStarted = ["open", "closed", "archived"].includes(election.status);
 
   const handleSaveRules = () => {
+    if (hasStarted) return;
+    const newErrors: Record<string, string> = {};
+    if (!rules.maxTotalVotesPerVoter || rules.maxTotalVotesPerVoter < 1) {
+      newErrors.votingRules = "Max total votes per voter must be at least 1";
+    } else if (!rules.maxVotesPerCandidate || rules.maxVotesPerCandidate < 1) {
+      newErrors.votingRules = "Max votes per candidate must be at least 1";
+    } else if (rules.maxVotesPerCandidate > rules.maxTotalVotesPerVoter) {
+      newErrors.votingRules = "Max per candidate cannot exceed max total votes";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
     startTransition(async () => {
       await updateVotingRules(electionId, rules);
       setSaved(true);
@@ -40,6 +58,7 @@ export function RulesManager({ electionId, initialData }: RulesManagerProps) {
   };
 
   const handleUpdatePrivileges = (candidateId: string, field: string, value: number | null | boolean) => {
+    if (hasStarted) return;
     startTransition(async () => {
       const candidate = election.candidates.find((c) => c._id === candidateId);
       if (!candidate) return;
@@ -53,19 +72,33 @@ export function RulesManager({ electionId, initialData }: RulesManagerProps) {
 
   return (
     <div className="space-y-6">
+      {hasStarted && (
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning-light)]/50 p-4 text-[var(--warning)] shadow-sm animate-in fade-in duration-200">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--warning)] mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-sm text-[var(--text-primary)]">Election has started</h4>
+            <p className="text-xs mt-1 text-[var(--text-secondary)] leading-relaxed">
+              You cannot edit the candidates, rules, or settings once the election has started to ensure voting integrity.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Election-level rules */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-[var(--primary)]" />
           Election Rules
         </h3>
-        <VotingRulesForm rules={rules} onRulesChange={setRules} />
-        <div className="mt-4 flex items-center gap-3">
-          <Button onClick={handleSaveRules} disabled={isPending}>
-            <Save className="h-4 w-4" /> {isPending ? "Saving..." : "Save Rules"}
-          </Button>
-          {saved && <p className="text-sm text-[var(--secondary)]">Saved!</p>}
-        </div>
+        <VotingRulesForm rules={rules} onRulesChange={setRules} disabled={hasStarted} errors={errors} />
+        {!hasStarted && (
+          <div className="mt-4 flex items-center gap-3">
+            <Button onClick={handleSaveRules} disabled={isPending}>
+              <Save className="h-4 w-4" /> {isPending ? "Saving..." : "Save Rules"}
+            </Button>
+            {saved && <p className="text-sm text-[var(--secondary)]">Saved!</p>}
+          </div>
+        )}
       </div>
 
       <Separator />
@@ -92,6 +125,7 @@ export function RulesManager({ electionId, initialData }: RulesManagerProps) {
                     onChange={(e) =>
                       handleUpdatePrivileges(c._id, "maxVotesReceivable", e.target.value ? parseInt(e.target.value) : null)
                     }
+                    disabled={hasStarted}
                     className="w-20 h-8 text-sm"
                   />
                 </div>
@@ -101,6 +135,7 @@ export function RulesManager({ electionId, initialData }: RulesManagerProps) {
                     <Switch
                       checked={c.isEligibleForVoting}
                       onCheckedChange={(val) => handleUpdatePrivileges(c._id, "isEligibleForVoting", val)}
+                      disabled={hasStarted}
                     />
                   </div>
                 </div>

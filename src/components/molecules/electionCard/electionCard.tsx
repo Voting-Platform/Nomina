@@ -76,26 +76,29 @@ export function ElectionCard({
               <MoreHorizontal className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem asChild>
-              <Link href={`/elections/${election._id}/edit`}>
+              <Link href={`/elections/${election._id}?tab=edit`}>
                 <Pencil className="h-4 w-4" /> Edit
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/elections/${election._id}/share`}>
+              <Link href={`/elections/${election._id}?tab=share`}>
                 <Share2 className="h-4 w-4" /> Share
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/elections/${election._id}/results`}>
+              <Link href={`/elections/${election._id}?tab=results`}>
                 <BarChart3 className="h-4 w-4" /> Results
               </Link>
             </DropdownMenuItem>
             {onDuplicate && (
               <DropdownMenuItem
                 disabled={isDuplicating}
-                onClick={() => onDuplicate(election._id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(election._id);
+                }}
               >
                 {isDuplicating ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -110,7 +113,10 @@ export function ElectionCard({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-[var(--destructive)] focus:text-[var(--destructive)]"
-                  onClick={() => onDelete(election._id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(election._id);
+                  }}
                 >
                   <Trash2 className="h-4 w-4" /> Delete
                 </DropdownMenuItem>
